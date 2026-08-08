@@ -5,6 +5,7 @@ import { getCandidates, getCohortInfo, Candidate } from '@/lib/candidates';
 import { HeroSection } from '@/components/HeroSection';
 import { CandidateCard } from '@/components/CandidateCard';
 import { CandidateModal } from '@/components/CandidateModal';
+import { Reveal } from '@/components/Reveal';
 import { Layers, AlertCircle, Sparkles } from 'lucide-react';
 
 export default function LandingPage() {
@@ -111,15 +112,16 @@ export default function LandingPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCandidates.map((candidate, idx) => (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                sequenceNum={idx + 1}
-                onSelect={(cand) => {
-                  setCurrentIndex(idx);
-                  setActiveCandidate(cand);
-                }}
-              />
+              <Reveal key={candidate.id} delayMs={(idx % 6) * 70}>
+                <CandidateCard
+                  candidate={candidate}
+                  sequenceNum={idx + 1}
+                  onSelect={(cand) => {
+                    setCurrentIndex(idx);
+                    setActiveCandidate(cand);
+                  }}
+                />
+              </Reveal>
             ))}
           </div>
         )}
