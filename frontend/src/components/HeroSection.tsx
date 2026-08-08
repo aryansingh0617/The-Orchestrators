@@ -38,25 +38,25 @@ export function HeroSection({
   return (
     <header className="mb-10 relative z-10">
       {/* Minimal Top Navbar */}
-      <nav className="flex items-center justify-between py-4 mb-8 border-b border-[#D174D2]/20">
+      <nav className="flex items-center justify-between py-4 mb-8 border-b border-[#C13383]/25">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full border border-[#D174D2]/40 bg-[#412653]/60 flex items-center justify-center shadow-sm">
-            <Cpu className="w-4 h-4 text-[#E0563F]" />
+          <div className="w-8 h-8 rounded-full border border-[#C13383]/40 bg-[#443199]/60 flex items-center justify-center shadow-sm">
+            <Cpu className="w-4 h-4 text-[#E05454]" />
           </div>
-          <span className="font-bitcount text-lg font-bold tracking-widest text-white">
+          <span className="font-bitcount text-lg font-light tracking-widest text-white">
             CHIMERA OS
           </span>
         </div>
 
         {/* Sparse Nav Links */}
-        <div className="flex items-center gap-6 sm:gap-8 font-mono text-xs text-white/90 font-medium">
-          <a href="#missions" className="hover:text-[#D174D2] transition-colors">
+        <div className="flex items-center gap-6 sm:gap-8 font-bitcount text-xs text-white/90 font-normal">
+          <a href="#missions" className="hover:text-[#C13383] transition-colors">
             Missions
           </a>
-          <a href="#profile" className="hover:text-[#D174D2] transition-colors">
+          <a href="#profile" className="hover:text-[#C13383] transition-colors">
             Profile
           </a>
-          <a href="#system" className="hover:text-[#D174D2] transition-colors">
+          <a href="#system" className="hover:text-[#C13383] transition-colors">
             System
           </a>
         </div>
@@ -68,19 +68,19 @@ export function HeroSection({
           <div className="space-y-4 max-w-2xl">
             {/* Sequence Indicator & Pill */}
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-full border-2 border-[#D174D2]/60 bg-[#412653]/50 flex items-center justify-center font-bitcount text-base font-bold text-[#D174D2] shadow-inner">
+              <div className="w-11 h-11 rounded-full border-2 border-[#C13383]/60 bg-[#443199]/50 flex items-center justify-center font-bitcount text-base font-medium text-[#C13383] shadow-inner">
                 01
               </div>
-              <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-[#E0563F]/40 bg-[#E0563F]/15">
-                <span className="w-2 h-2 rounded-full bg-[#E0563F] animate-pulse" />
-                <span className="font-mono text-xs font-bold text-white tracking-wider">
+              <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-[#E05454]/40 bg-[#E05454]/15">
+                <span className="w-2 h-2 rounded-full bg-[#E05454] animate-pulse" />
+                <span className="font-bitcount text-xs font-normal text-white tracking-wider">
                   AI COHORT // {totalCandidates} DOSSIERS
                 </span>
               </div>
             </div>
 
-            {/* Oversized Heading in Bitcount Prop Single */}
-            <h1 className="font-bitcount text-5xl sm:text-7xl font-extrabold tracking-tight text-glow-coral leading-none">
+            {/* Main CHIMERA Hero Logo Text - Significantly Less Bold (font-light / font-normal) */}
+            <h1 className="font-bitcount text-5xl sm:text-7xl font-light tracking-tight text-glow-coral leading-none">
               CHIMERA
             </h1>
 
@@ -97,7 +97,7 @@ export function HeroSection({
                 onClick={onPrevCandidate}
                 type="button"
                 aria-label="Previous Candidate"
-                className="w-12 h-12 rounded-full border border-[#D174D2]/40 bg-[#412653]/50 backdrop-blur-md flex items-center justify-center text-white hover:border-[#E0563F] hover:bg-[#E0563F]/20 transition-all cursor-pointer shadow-md"
+                className="w-12 h-12 rounded-full border border-[#C13383]/40 bg-[#443199]/50 backdrop-blur-md flex items-center justify-center text-white hover:border-[#E05454] hover:bg-[#E05454]/20 transition-all cursor-pointer shadow-md"
               >
                 <ChevronLeft className="w-6 h-6 text-white" />
               </button>
@@ -105,7 +105,7 @@ export function HeroSection({
                 onClick={onNextCandidate}
                 type="button"
                 aria-label="Next Candidate"
-                className="w-12 h-12 rounded-full border border-[#D174D2]/40 bg-[#412653]/50 backdrop-blur-md flex items-center justify-center text-white hover:border-[#E0563F] hover:bg-[#E0563F]/20 transition-all cursor-pointer shadow-md"
+                className="w-12 h-12 rounded-full border border-[#C13383]/40 bg-[#443199]/50 backdrop-blur-md flex items-center justify-center text-white hover:border-[#E05454] hover:bg-[#E05454]/20 transition-all cursor-pointer shadow-md"
               >
                 <ChevronRight className="w-6 h-6 text-white" />
               </button>
@@ -118,14 +118,14 @@ export function HeroSection({
       <div className="glass-panel p-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search Bar */}
         <div className="relative w-full sm:w-72">
-          <div className="glass-well rounded-xl flex items-center px-3.5 py-2 border border-[#D174D2]/20 focus-within:border-[#E0563F]/60 transition-colors">
+          <div className="glass-well rounded-xl flex items-center px-3.5 py-2 border border-[#C13383]/25 focus-within:border-[#E05454]/60 transition-colors">
             <Search className="w-4 h-4 text-slate-300 shrink-0 mr-2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search candidate..."
-              className="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-full font-mono"
+              className="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-full font-bitcount font-normal"
             />
           </div>
         </div>
@@ -139,8 +139,8 @@ export function HeroSection({
                 key={f.id}
                 onClick={() => onFilterChange(f.id)}
                 type="button"
-                className={`glass-secondary-btn text-xs font-bold px-3 py-1.5 font-mono cursor-pointer ${
-                  isActive ? 'active text-[#E0563F]' : 'text-white'
+                className={`glass-secondary-btn text-xs font-normal px-3 py-1.5 font-bitcount cursor-pointer ${
+                  isActive ? 'active text-[#E05454]' : 'text-white'
                 }`}
               >
                 {f.label}
