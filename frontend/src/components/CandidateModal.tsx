@@ -37,26 +37,26 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
       {/* Dark Blur Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-950/75 backdrop-blur-xl transition-opacity"
+        className="fixed inset-0 bg-[#412653]/80 backdrop-blur-xl transition-opacity"
       />
 
       {/* Glassmorphic Modal Frame */}
-      <div className="glass-modal relative w-full max-w-3xl z-10 p-6 sm:p-8 max-h-[90vh] overflow-y-auto my-auto border border-white/25 shadow-[0_30px_80px_rgba(0,0,0,0.9)]">
+      <div className="glass-modal relative w-full max-w-3xl z-10 p-6 sm:p-8 max-h-[90vh] overflow-y-auto my-auto border border-[#D174D2]/40 shadow-[0_35px_90px_rgba(0,0,0,0.9)]">
         {/* Close Button */}
         <button
           onClick={onClose}
           type="button"
-          className="glass-secondary-btn absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center text-slate-200 hover:text-white z-20 cursor-pointer"
+          className="glass-secondary-btn absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center text-white hover:text-[#E0563F] z-20 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Top Header Badge */}
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/15">
-          <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-pink-400/30 bg-pink-500/10">
-            <span className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
-            <span className="font-mono text-xs font-bold text-pink-200 uppercase tracking-widest">
-              CHIMERA ASSESSMENT DOSSIER // {candidate.id}
+          <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-[#E0563F]/40 bg-[#E0563F]/15">
+            <span className="w-2 h-2 rounded-full bg-[#E0563F] animate-pulse" />
+            <span className="font-mono text-xs font-bold text-white uppercase tracking-widest">
+              CHIMERA DOSSIER // {candidate.id}
             </span>
           </div>
         </div>
@@ -75,22 +75,22 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
 
             <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl sm:text-3xl font-black text-white glass-text-glow">
+                <h2 className="text-2xl sm:text-3xl font-bold font-bitcount text-white text-glow-coral">
                   {candidate.name}
                 </h2>
                 <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {candidate.status}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-pink-300 mt-1 flex items-center gap-1.5">
-                <Briefcase className="w-4 h-4 text-pink-400" />
+              <p className="text-sm font-semibold text-[#D174D2] mt-1 flex items-center gap-1.5">
+                <Briefcase className="w-4 h-4 text-[#E0563F]" />
                 {candidate.jobRole}
               </p>
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-200 mt-1.5">
                 <span>{candidate.yearsExperience} Yrs Experience</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <GraduationCap className="w-3.5 h-3.5 text-violet-400" />
+                  <GraduationCap className="w-3.5 h-3.5 text-[#D174D2]" />
                   {candidate.education}
                 </span>
               </div>
@@ -98,13 +98,13 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
           </div>
 
           {/* Assessment Score Badge */}
-          <div className="glass-well p-4 rounded-2xl border border-amber-400/40 bg-amber-500/15 flex items-center gap-3 self-stretch sm:self-auto justify-center">
-            <Award className="w-8 h-8 text-amber-400 shrink-0" />
+          <div className="glass-well p-4 rounded-2xl border border-[#E0563F]/40 bg-[#E0563F]/15 flex items-center gap-3 self-stretch sm:self-auto justify-center">
+            <Award className="w-8 h-8 text-[#E0563F] shrink-0" />
             <div>
               <div className="text-[10px] font-mono uppercase text-slate-300">
-                OVERALL RATING
+                RATING
               </div>
-              <div className="text-2xl font-black font-mono text-amber-300">
+              <div className="text-2xl font-black font-mono text-white">
                 {candidate.overallScore} / 100
               </div>
             </div>
@@ -117,7 +117,7 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
             <div className="text-[10px] font-mono text-slate-300 uppercase mb-1">
               Commit Days
             </div>
-            <div className="text-lg font-black font-mono text-pink-300">
+            <div className="text-lg font-black font-mono text-[#D174D2]">
               {candidate.signals.commitDays} / 31
             </div>
           </div>
@@ -133,7 +133,7 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
             <div className="text-[10px] font-mono text-slate-300 uppercase mb-1">
               1st Try Accuracy
             </div>
-            <div className="text-lg font-black font-mono text-violet-300">
+            <div className="text-lg font-black font-mono text-[#E0563F]">
               {candidate.signals.missionsFirstTry} ({candidate.firstTryRate}%)
             </div>
           </div>
@@ -143,7 +143,7 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
         <div className="mb-8">
           <div className="flex items-center justify-between font-mono text-xs font-bold text-slate-200 uppercase mb-3">
             <span className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-pink-400" />
+              <Layers className="w-4 h-4 text-[#E0563F]" />
               Evaluated Curriculum Missions Log ({candidate.missions.length})
             </span>
             <span className="text-slate-300 text-[11px]">
@@ -193,7 +193,7 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
         {/* Massive Glassmorphic Action Push Button */}
         <div className="pt-2 border-t border-white/15 text-center">
           <p className="text-xs font-mono text-slate-300 uppercase tracking-widest mb-4">
-            Initialize AI Interview Assessment Room
+            Initialize AI Candidate Assessment Simulation
           </p>
           <TactileButton candidateId={candidate.id} size="xl" />
         </div>
