@@ -61,8 +61,8 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto relative z-10">
-      {/* Hero Section with Nav & Circular Arrows */}
+    <main className="min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto relative z-10 font-bitcount">
+      {/* Hero Section */}
       <HeroSection
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -78,23 +78,23 @@ export default function LandingPage() {
       <section className="mb-12">
         <div className="flex items-center justify-between mb-6 px-1">
           <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-[#E0563F]" />
-            <h2 className="text-xl font-bold text-white uppercase tracking-wider font-bitcount text-glow-coral">
+            <Layers className="w-5 h-5 text-[#E05454]" />
+            <h2 className="text-xl font-normal text-white uppercase tracking-wider font-bitcount text-glow-coral">
               Candidate Dossiers
             </h2>
           </div>
-          <span className="font-mono text-xs text-white bg-[#E0563F]/20 px-3.5 py-1 rounded-full border border-[#E0563F]/40 backdrop-blur-md">
+          <span className="font-bitcount text-xs text-white bg-[#E05454]/20 px-3.5 py-1 rounded-full border border-[#E05454]/40 backdrop-blur-md">
             Showing {filteredCandidates.length} of {allCandidates.length}
           </span>
         </div>
 
         {filteredCandidates.length === 0 ? (
           <div className="glass-panel p-12 text-center flex flex-col items-center justify-center">
-            <AlertCircle className="w-12 h-12 text-[#E0563F] mb-3" />
-            <h3 className="text-lg font-bold text-white font-bitcount">
+            <AlertCircle className="w-12 h-12 text-[#E05454] mb-3" />
+            <h3 className="text-lg font-normal text-white font-bitcount">
               No Dossiers Found
             </h3>
-            <p className="text-xs text-slate-300 mt-1 max-w-md">
+            <p className="text-xs text-[#D6D6D6] mt-1 max-w-md font-bitcount">
               Adjust search keywords or filter options to inspect candidate dossiers.
             </p>
             <button
@@ -103,7 +103,7 @@ export default function LandingPage() {
                 setSelectedFilter('ALL');
               }}
               type="button"
-              className="glass-secondary-btn text-xs font-mono font-bold px-4 py-2 rounded-xl mt-4 text-[#D174D2]"
+              className="glass-secondary-btn text-xs font-bitcount px-4 py-2 rounded-xl mt-4 text-[#C13383]"
             >
               Reset Filters
             </button>
@@ -126,10 +126,10 @@ export default function LandingPage() {
       </section>
 
       {/* Minimalist Telemetry Footer */}
-      <footer className="glass-panel p-4 text-center text-xs font-mono text-slate-300 border border-[#D174D2]/20">
+      <footer className="glass-panel p-4 text-center text-xs font-bitcount text-[#D6D6D6] border border-white/20">
         <p className="flex items-center justify-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#D174D2]" />
-          CHIMERA ASSESSMENT OS // COHORT TELEMETRY ACTIVE
+          <Sparkles className="w-4 h-4 text-[#C13383]" />
+          CHIMERA ASSESSMENT OS // FULL-SCREEN VIDEO TELEMETRY ACTIVE
         </p>
       </footer>
 
