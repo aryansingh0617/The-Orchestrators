@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getCandidateById } from '@/lib/candidates';
 import {
@@ -27,6 +27,7 @@ export default function InterviewTerminalPage() {
 
   const [messageText, setMessageText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [logs, setLogs] = useState<string[]>([
     `[SYS_INIT] Initializing Video Assessment Engine (/Luma-Dot-Background)...`,
     `[DOSSIER_VERIFIED] Candidate '${candidateId}' telemetry parsed.`,
@@ -34,6 +35,57 @@ export default function InterviewTerminalPage() {
     `[CURRICULUM_LOAD] Loading Capstone Mission: 'Model Context Protocol & Multi-Agent Swarms'.`,
     `[PROMPT] "Candidate ${candidate?.name || candidateId}, demonstrate how your MCP server architecture handles tool timeouts under load."`,
   ]);
+
+  // Silent session initialization on component mount
+  useEffect(() => {
+    if (!candidate) {
+      setIsInitializing(false);
+      return;
+    }
+
+    const initSession = async () => {
+      try {
+        const res = await fetch('/api/interview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId: candidateId,
+            candidate: {
+              member: {
+                id: candidate.id,
+                name: candidate.name,
+                jobRole: candidate.jobRole,
+                yearsExperience: candidate.yearsExperience,
+                education: candidate.education,
+                status: candidate.status,
+              },
+              missions: candidate.missions,
+              signals: candidate.signals,
+            },
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setLogs((prev) => [
+            ...prev,
+            `[SESSION_INIT] Backend session '${candidateId}' created in InMemorySessionRepository.`,
+          ]);
+          if (data.reply) {
+            setLogs((prev) => [...prev, `[AGENT_REPLY] "${data.reply}"`]);
+          }
+        }
+      } catch (err: any) {
+        console.warn('Backend session init warning:', err);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initSession();
+  }, [candidateId, candidate]);
 
   if (!candidate) {
     return (
@@ -59,7 +111,7 @@ export default function InterviewTerminalPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = messageText.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || isInitializing) return;
 
     // 1. Immediately append user message to terminal log
     setLogs((prev) => [...prev, `[USER_MSG] "${trimmed}"`]);
@@ -197,6 +249,8 @@ export default function InterviewTerminalPage() {
                   className={`leading-relaxed ${
                     log.includes('[SYS_ERROR]')
                       ? 'text-rose-400 font-normal bg-rose-500/15 p-2 rounded-lg border border-rose-500/30'
+                      : log.includes('[SESSION_INIT]')
+                      ? 'text-purple-300 font-normal bg-purple-500/15 p-2 rounded-lg border border-purple-500/30'
                       : log.includes('[SYS')
                       ? 'text-slate-400'
                       : log.includes('[PROMPT]')
@@ -219,23 +273,29 @@ export default function InterviewTerminalPage() {
             <form onSubmit={handleSendMessage} className="flex items-center gap-2.5 mt-4">
               <input
                 type="text"
-                disabled={isLoading}
+                disabled={isLoading || isInitializing}
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
-                placeholder={isLoading ? 'Awaiting backend agent response...' : 'Type a message or response for the candidate/agent...'}
+                placeholder={
+                  isInitializing
+                    ? 'Initializing backend session...'
+                    : isLoading
+                    ? 'Awaiting backend agent response...'
+                    : 'Type a message or response for the candidate/agent...'
+                }
                 className="flex-1 bg-white/5 border border-white/15 text-white placeholder-white/40 px-4 py-2.5 rounded-xl text-xs font-bitcount focus:outline-none focus:ring-1 focus:ring-[#E05454]/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
-                disabled={isLoading || !messageText.trim()}
+                disabled={isLoading || isInitializing || !messageText.trim()}
                 className="glass-action-btn px-5 py-2.5 rounded-xl text-xs font-bitcount flex items-center gap-2 text-white cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? (
+                {isLoading || isInitializing ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Send className="w-3.5 h-3.5" />
                 )}
-                {isLoading ? 'Sending...' : 'Send'}
+                {isInitializing ? 'Init...' : isLoading ? 'Sending...' : 'Send'}
               </button>
             </form>
           </div>
