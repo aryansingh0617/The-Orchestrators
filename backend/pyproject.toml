@@ -7,6 +7,7 @@ dependencies = [
   "fastapi>=0.115.0",
   "pydantic>=2.8.0",
   "pydantic-settings>=2.4.0",
+  "sqlalchemy>=2.0.0",
   "uvicorn[standard]>=0.30.0",
 ]
 
@@ -27,4 +28,5 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
 

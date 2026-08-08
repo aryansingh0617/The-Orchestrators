@@ -18,7 +18,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ),
     )
     app.state.settings = resolved_settings
-    app.state.session_repository = InMemorySessionRepository()
+
+    if resolved_settings.environment == "test":
+        app.state.session_repository = InMemorySessionRepository()
+    else:
+        from app.infrastructure.database.base import Base
+        from app.infrastructure.database.session import create_db_engine, get_session_factory
+        from app.infrastructure.repositories import SqlSessionRepository
+
+        engine = create_db_engine(resolved_settings.database_url)
+        Base.metadata.create_all(bind=engine)
+        session_factory = get_session_factory(resolved_settings.database_url)
+        
+        # Open a session for the singleton session repository (or handle session per request later)
+        db_session = session_factory()
+        app.state.db_session = db_session
+        app.state.session_repository = SqlSessionRepository(db_session)
 
     register_exception_handlers(app)
     app.include_router(health_router)

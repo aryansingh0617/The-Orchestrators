@@ -101,3 +101,14 @@ class AssessmentSession:
     status: SessionStatus
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(slots=True)
+class Candidate:
+    id: str
+    display_name: str | None
+    email: str | None
+    profile_summary: str | None
+    created_at: datetime
+    updated_at: datetime
+
