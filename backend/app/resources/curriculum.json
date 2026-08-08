@@ -1,0 +1,138 @@
+{
+  "cohort": "AI Engineering Intensive",
+  "modules": [
+    {
+      "name": "RAG Foundations",
+      "days": [
+        {
+          "day": 1,
+          "topic": "Retrieval Augmented Generation",
+          "learning_objective": "Design a RAG pipeline with chunking, embedding, retrieval, and grounded generation.",
+          "tools": ["embeddings", "vector-store", "llm"],
+          "prerequisites": []
+        },
+        {
+          "day": 2,
+          "topic": "Chunking and Indexing Strategies",
+          "learning_objective": "Compare chunk sizes, overlap, and indexing refresh impacts on recall and latency.",
+          "tools": ["chunkers", "indexers"],
+          "prerequisites": [1]
+        }
+      ]
+    },
+    {
+      "name": "Vector Databases",
+      "days": [
+        {
+          "day": 3,
+          "topic": "Vector Storage and Similarity Search",
+          "learning_objective": "Select distance metrics and index types (HNSW/IVF) for production retrieval.",
+          "tools": ["pgvector", "hnsw"],
+          "prerequisites": [1]
+        },
+        {
+          "day": 4,
+          "topic": "Hybrid Search and Reranking",
+          "learning_objective": "Combine sparse and dense retrieval with rerankers under latency budgets.",
+          "tools": ["bm25", "cross-encoder"],
+          "prerequisites": [3]
+        }
+      ]
+    },
+    {
+      "name": "Prompt Engineering",
+      "days": [
+        {
+          "day": 5,
+          "topic": "Structured Prompt Design",
+          "learning_objective": "Build resilient prompts with schemas, few-shot examples, and output validation.",
+          "tools": ["json-schema", "prompt-templates"],
+          "prerequisites": []
+        },
+        {
+          "day": 6,
+          "topic": "Evaluation of Prompt Changes",
+          "learning_objective": "Measure prompt regressions with golden sets and failure taxonomies.",
+          "tools": ["eval-harness"],
+          "prerequisites": [5]
+        }
+      ]
+    },
+    {
+      "name": "Agentic AI",
+      "days": [
+        {
+          "day": 7,
+          "topic": "Tool-Using Agents",
+          "learning_objective": "Design agent loops with tool selection, retries, and bounded autonomy.",
+          "tools": ["function-calling", "tool-registry"],
+          "prerequisites": [5]
+        },
+        {
+          "day": 8,
+          "topic": "Multi-Agent Coordination",
+          "learning_objective": "Coordinate specialist agents with shared memory and escalation policies.",
+          "tools": ["orchestrator", "shared-memory"],
+          "prerequisites": [7]
+        }
+      ]
+    },
+    {
+      "name": "MCP",
+      "days": [
+        {
+          "day": 9,
+          "topic": "Model Context Protocol Basics",
+          "learning_objective": "Expose tools and resources through MCP with auth and capability discovery.",
+          "tools": ["mcp-server", "mcp-client"],
+          "prerequisites": [7]
+        },
+        {
+          "day": 10,
+          "topic": "Secure MCP Integrations",
+          "learning_objective": "Contain blast radius for MCP tools with least privilege and audit trails.",
+          "tools": ["oauth", "audit-log"],
+          "prerequisites": [9]
+        }
+      ]
+    },
+    {
+      "name": "AI Deployment",
+      "days": [
+        {
+          "day": 11,
+          "topic": "Serving and Latency Budgets",
+          "learning_objective": "Deploy AI services with caching, batching, and SLOs for latency and cost.",
+          "tools": ["fastapi", "redis-cache"],
+          "prerequisites": [1]
+        },
+        {
+          "day": 12,
+          "topic": "Canary and Rollback Strategies",
+          "learning_objective": "Ship model/prompt changes safely with canaries, gates, and rollback plans.",
+          "tools": ["feature-flags", "observability"],
+          "prerequisites": [11]
+        }
+      ]
+    },
+    {
+      "name": "Production AI Systems",
+      "days": [
+        {
+          "day": 13,
+          "topic": "Observability and Incident Response",
+          "learning_objective": "Instrument RAG/agent systems and respond to production quality incidents.",
+          "tools": ["tracing", "metrics", "logs"],
+          "prerequisites": [2, 11]
+        },
+        {
+          "day": 14,
+          "topic": "Reliability, Cost, and Safety Tradeoffs",
+          "learning_objective": "Balance reliability, cost, and safety controls in production AI systems.",
+          "tools": ["rate-limits", "guardrails", "cost-dashboards"],
+          "prerequisites": [12, 13]
+        }
+      ]
+    }
+  ]
+}
