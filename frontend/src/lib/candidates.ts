@@ -78,7 +78,7 @@ export function getCandidates(): Candidate[] {
 
   return rawCandidates.map((c, idx) => {
     const passedMissions = c.missions.filter((m) => m.passed);
-    const skippedMissions = c.missions.filter((m) => m.skipped);
+    const skippedMissions = c.skippedMissions = c.missions.filter((m) => m.skipped);
 
     const completed = c.signals.missionsCompleted;
     const firstTry = c.signals.missionsFirstTry;

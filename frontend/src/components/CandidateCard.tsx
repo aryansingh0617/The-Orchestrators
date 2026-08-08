@@ -51,7 +51,7 @@ export function CandidateCard({ candidate, sequenceNum, onSelect }: CandidateCar
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-normal font-bitcount text-white drop-shadow-sm group-hover:text-[#E05454] transition-colors truncate">
+            <h3 className="text-base font-normal font-bitcount text-[#FFFFFF] drop-shadow-sm group-hover:text-[#E05454] transition-colors truncate">
               {candidate.name}
             </h3>
             <p className="text-xs font-normal text-[#D6D6D6] truncate mt-0.5 flex items-center gap-1">
