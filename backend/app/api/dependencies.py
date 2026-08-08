@@ -6,6 +6,7 @@ from app.application.services import InterviewService
 from app.core.clock import Clock, SystemClock
 from app.core.ids import IdGenerator, UuidGenerator
 from app.core.settings import Settings
+from app.domain.errors import ProviderError
 from app.domain.interfaces import (
     AIProvider,
     EvidenceRepository,
@@ -15,7 +16,7 @@ from app.domain.interfaces import (
     TurnRepository,
     WorldStateRepository,
 )
-from app.infrastructure.ai import StubProvider
+from app.infrastructure.ai import OpenAIProvider, StubProvider
 
 
 def get_settings(request: Request) -> Settings:
@@ -46,10 +47,25 @@ def get_world_state_repository(request: Request) -> WorldStateRepository | None:
     return getattr(request.app.state, "world_state_repository", None)
 
 
-def get_ai_provider(settings: Annotated[Settings, Depends(get_settings)]) -> AIProvider:
-    if settings.ai_provider == "stub":
+def build_ai_provider(settings: Settings) -> AIProvider:
+    if settings.demo_mode or settings.environment == "test":
         return StubProvider()
+    if settings.ai_provider == "openai":
+        if not settings.openai_api_key:
+            raise ProviderError(
+                "CHIMERA_OPENAI_API_KEY is required when CHIMERA_AI_PROVIDER=openai."
+            )
+        return OpenAIProvider(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            timeout_seconds=settings.openai_timeout_seconds,
+            max_retries=settings.openai_max_retries,
+        )
     return StubProvider()
+
+
+def get_ai_provider(settings: Annotated[Settings, Depends(get_settings)]) -> AIProvider:
+    return build_ai_provider(settings)
 
 
 def get_clock() -> Clock:
@@ -70,6 +86,7 @@ def get_interview_service(
     memory_repo: Annotated[MemoryRepository | None, Depends(get_memory_repository)],
     missions: Annotated[MissionRepository | None, Depends(get_mission_repository)],
     world_states: Annotated[WorldStateRepository | None, Depends(get_world_state_repository)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> InterviewService:
     return InterviewService(
         sessions=sessions,
@@ -81,4 +98,5 @@ def get_interview_service(
         memory_repo=memory_repo,
         missions=missions,
         world_states=world_states,
+        max_message_length=settings.max_message_length,
     )
