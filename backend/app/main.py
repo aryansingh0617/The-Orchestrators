@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_exception_handlers
 from app.api.routes.health import router as health_router
@@ -25,6 +26,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = resolved_settings
 
+    origins = [o.strip() for o in resolved_settings.cors_origins.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins or ["http://localhost:3000"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", resolved_settings.request_id_header, "Authorization"],
+        max_age=600,
+    )
+
     if resolved_settings.environment == "test":
         app.state.session_repository = InMemorySessionRepository()
         app.state.turn_repository = InMemoryTurnRepository()
@@ -45,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
         engine = create_db_engine(resolved_settings.database_url)
+        # Prefer Alembic for schema evolution; create_all remains a local fallback.
         Base.metadata.create_all(bind=engine)
         session_factory = get_session_factory(resolved_settings.database_url)
         db_session = session_factory()

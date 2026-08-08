@@ -1,7 +1,19 @@
 from __future__ import annotations
 
-from app.application.dtos import FeedbackDTO, InterviewCommand, InterviewResult
+from app.application.dtos import (
+    EvaluationSummaryDTO,
+    FeedbackDTO,
+    InterviewCommand,
+    InterviewResult,
+    MissionPublicDTO,
+    ProgressDTO,
+    WorldStatePublicDTO,
+)
 from app.application.runtime_state import InterviewRuntimeState
+from app.application.security import (
+    detect_prompt_injection,
+    sanitize_candidate_text,
+)
 from app.core.clock import Clock
 from app.core.ids import IdGenerator
 from app.domain.entities.assessment import (
@@ -30,8 +42,8 @@ from app.modules.evaluation_engine import EvaluationEngine
 from app.modules.feedback_generator import FeedbackGenerator
 from app.modules.interview_planner import InterviewPlanner, PlannerInput
 from app.modules.memory_engine import MemoryEngine
-from app.modules.mission_generator import MissionGenerator
-from app.modules.world_state_engine import WorldStateEngine
+from app.modules.mission_generator import MissionBrief, MissionGenerator
+from app.modules.world_state_engine import WorldStateEngine, WorldStateSnapshot
 
 
 class InterviewService:
@@ -51,6 +63,7 @@ class InterviewService:
         memory_repo: MemoryRepository | None = None,
         missions: MissionRepository | None = None,
         world_states: WorldStateRepository | None = None,
+        max_message_length: int = 8000,
     ) -> None:
         self._sessions = sessions
         self._ai_provider = ai_provider
@@ -61,6 +74,7 @@ class InterviewService:
         self._memory_repo = memory_repo
         self._missions = missions
         self._world_states = world_states
+        self._max_message_length = max_message_length
 
         self._candidate_analyzer = CandidateAnalyzer(ai_provider)
         self._curriculum_analyzer = CurriculumAnalyzer(ai_provider)
@@ -89,7 +103,11 @@ class InterviewService:
                 "A non-empty message is required for an active interview turn.",
                 details={"sessionId": command.session_id},
             )
-        return self._continue_interview(existing, runtime, command.message.strip())
+        message = sanitize_candidate_text(
+            command.message,
+            max_length=self._max_message_length,
+        )
+        return self._continue_interview(existing, runtime, message)
 
     def _start_interview(self, command: InterviewCommand) -> InterviewResult:
         if command.candidate is None:
@@ -100,6 +118,7 @@ class InterviewService:
         role_title = member.jobRole or "AI Engineer"
         seniority = self._infer_seniority(member.yearsExperience)
 
+        # Curriculum/candidate analysis run once at session start and are persisted.
         candidate_analysis = self._candidate_analyzer.analyze(command.candidate)
         curriculum_analysis = self._curriculum_analyzer.analyze(
             role_title=role_title,
@@ -156,7 +175,6 @@ class InterviewService:
         )
 
         self._persist_mission(session.id, mission)
-        self._persist_world(session.id, world)
         self._save_runtime(runtime)
 
         reply = (
@@ -164,7 +182,12 @@ class InterviewService:
             f"{mission.candidate_facing_prompt()}\n\n"
             f"Current system state: {world.visible_summary}"
         )
-        return InterviewResult(reply=reply, done=False)
+        return self._build_result(
+            runtime=runtime,
+            reply=reply,
+            done=False,
+            mode=decision.mode,
+        )
 
     def _continue_interview(
         self,
@@ -176,6 +199,7 @@ class InterviewService:
         if mission is None:
             raise ValidationError("Interview mission is missing; restart the session.")
 
+        injection_flagged = detect_prompt_injection(message)
         evaluation = self._evaluation_engine.evaluate(
             mission=mission,
             candidate_answer=message,
@@ -183,6 +207,21 @@ class InterviewService:
                 runtime.previous_evaluation.outcome if runtime.previous_evaluation else None
             ),
         )
+        if injection_flagged:
+            evaluation = evaluation.model_copy(
+                update={
+                    "outcome": "unsupported",
+                    "overall_score": min(evaluation.overall_score, 0.25),
+                    "rationale": (
+                        "Candidate answer included instruction-like content that was treated "
+                        "as untrusted data and not as system guidance."
+                    ),
+                    "claim_labels": list(
+                        dict.fromkeys([*evaluation.claim_labels, "prompt_injection_attempt"])
+                    ),
+                }
+            )
+
         evidence_ids = self._persist_evidence(session.id, evaluation, mission.competency)
         runtime.evidence_ids.extend(evidence_ids)
 
@@ -219,11 +258,10 @@ class InterviewService:
             },
         )
 
-        turn_id = self._id_generator.new_id()
         if self._turns is not None:
             self._turns.save(
                 CandidateTurn(
-                    id=turn_id,
+                    id=self._id_generator.new_id(),
                     session_id=session.id,
                     sequence_number=runtime.question_count,
                     prompt_text=runtime.previous_question or mission.title,
@@ -255,7 +293,7 @@ class InterviewService:
         decision = self._planner.plan(self._planner_input(runtime, message, evaluation))
 
         if decision.mode == "completion":
-            return self._complete(session, runtime)
+            return self._complete(session, runtime, evaluation)
 
         next_mission = self._mission_generator.generate(
             competency=decision.competency,
@@ -265,7 +303,7 @@ class InterviewService:
             topic=self._topic_for_day(runtime, decision.next_curriculum_day),
             learning_objective=self._objective_for_day(runtime, decision.next_curriculum_day),
             mode=decision.mode,
-            previous_answer=message,
+            previous_answer=message[:500],
             world_summary=runtime.world.visible_summary,
         )
 
@@ -284,7 +322,6 @@ class InterviewService:
         )
 
         self._persist_mission(session.id, next_mission)
-        self._persist_world(session.id, runtime.world)
         session.updated_at = self._clock.now()
         self._sessions.save(session)
         self._save_runtime(runtime)
@@ -293,12 +330,19 @@ class InterviewService:
             f"{runtime.world.visible_summary}\n\n"
             f"{next_mission.candidate_facing_prompt()}"
         )
-        return InterviewResult(reply=reply, done=False)
+        return self._build_result(
+            runtime=runtime,
+            reply=reply,
+            done=False,
+            mode=decision.mode,
+            evaluation=evaluation,
+        )
 
     def _complete(
         self,
         session: AssessmentSession,
         runtime: InterviewRuntimeState,
+        evaluation=None,
     ) -> InterviewResult:
         report = self._feedback_generator.generate(
             memory=runtime.memory,
@@ -312,7 +356,6 @@ class InterviewService:
         session.status = SessionStatus.COMPLETED
         session.updated_at = self._clock.now()
         self._sessions.save(session)
-        self._persist_world(session.id, runtime.world)
         self._save_runtime(runtime)
 
         feedback = FeedbackDTO(
@@ -320,13 +363,22 @@ class InterviewService:
             strengths=report.strengths,
             gaps=report.gaps,
             next=report.next,
+            engineering_dna=report.engineering_dna,
+            hiring_assessment=report.hiring_assessment,
         )
         reply = (
             "Interview completed.\n\n"
             f"{report.executive_summary}\n\n"
             f"Hiring assessment: {report.hiring_assessment}"
         )
-        return InterviewResult(reply=reply, done=True, feedback=feedback)
+        return self._build_result(
+            runtime=runtime,
+            reply=reply,
+            done=True,
+            mode="completion",
+            feedback=feedback,
+            evaluation=evaluation,
+        )
 
     def _completion_result(self, runtime: InterviewRuntimeState) -> InterviewResult:
         report = self._feedback_generator.generate(
@@ -337,15 +389,82 @@ class InterviewService:
             role_title=runtime.role_title,
             seniority=runtime.seniority,
         )
-        return InterviewResult(
+        return self._build_result(
+            runtime=runtime,
             reply="Interview completed.",
             done=True,
+            mode="completion",
             feedback=FeedbackDTO(
                 summary=report.summary,
                 strengths=report.strengths,
                 gaps=report.gaps,
                 next=report.next,
+                engineering_dna=report.engineering_dna,
+                hiring_assessment=report.hiring_assessment,
             ),
+        )
+
+    def _build_result(
+        self,
+        *,
+        runtime: InterviewRuntimeState,
+        reply: str,
+        done: bool,
+        mode: str | None = None,
+        feedback: FeedbackDTO | None = None,
+        evaluation=None,
+    ) -> InterviewResult:
+        mission = runtime.current_mission
+        return InterviewResult(
+            reply=reply,
+            done=done,
+            feedback=feedback,
+            session_id=runtime.session_id,
+            question_number=runtime.question_count,
+            curriculum_day=runtime.current_curriculum_day,
+            competency=runtime.current_competency,
+            mission=self._public_mission(mission) if mission else None,
+            world_state=self._public_world(runtime.world),
+            progress=ProgressDTO(
+                question_number=runtime.question_count,
+                curriculum_days_covered=len(runtime.covered_curriculum_days),
+                covered_curriculum_days=list(runtime.covered_curriculum_days),
+                minimum_questions=self.MIN_QUESTIONS,
+                minimum_curriculum_days=self.MIN_CURRICULUM_DAYS,
+            ),
+            evaluation_summary=(
+                EvaluationSummaryDTO(
+                    outcome=evaluation.outcome,
+                    overall_score=evaluation.overall_score,
+                    rationale=evaluation.rationale,
+                )
+                if evaluation is not None
+                else None
+            ),
+            mode=mode,
+        )
+
+    @staticmethod
+    def _public_mission(mission: MissionBrief) -> MissionPublicDTO:
+        return MissionPublicDTO(
+            title=mission.title,
+            scenario=mission.scenario,
+            context=mission.context,
+            constraints=list(mission.constraints),
+            objective=mission.objective,
+            competency=mission.competency,
+            curriculum_day=mission.curriculum_day,
+            difficulty=mission.difficulty,
+            mission_type=mission.mission_type,
+        )
+
+    @staticmethod
+    def _public_world(world: WorldStateSnapshot) -> WorldStatePublicDTO:
+        return WorldStatePublicDTO(
+            visible_summary=world.visible_summary,
+            system_state=dict(world.system_state),
+            version=world.version,
+            candidate_decisions=list(world.candidate_decisions[-8:]),
         )
 
     def _planner_input(
@@ -433,12 +552,6 @@ class InterviewService:
                 ),
             )
         )
-
-    def _persist_world(self, session_id: str, world) -> None:
-        if self._world_states is None:
-            return
-        # Runtime save handles persistence with embedded runtime blob.
-        _ = (session_id, world)
 
     def _persist_evidence(self, session_id: str, evaluation, competency: str) -> list[str]:
         ids: list[str] = []
