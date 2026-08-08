@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader } from "../ui/Card";
 import { Badge } from "../ui/Badge";
-import { Activity, Server } from "lucide-react";
+import { Server } from "lucide-react";
 
 interface WorldStateProps {
   version: number;

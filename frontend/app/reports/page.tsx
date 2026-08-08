@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Shield, FileCheck, Award, AlertCircle } from "lucide-react";
+import { Shield, FileCheck, AlertCircle } from "lucide-react";
 
 export default function ReportsPage() {
   return (

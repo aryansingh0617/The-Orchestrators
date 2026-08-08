@@ -1,44 +1,30 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { MissionCard } from "@/components/assessment/MissionCard";
 import { WorldStateViewer } from "@/components/assessment/WorldStateViewer";
 import { sendInterviewTurn, ApiClientError } from "@/lib/api/client";
-import { InterviewResponse } from "@/lib/types/interview";
+import { InterviewResponse, MissionData, ProgressData, WorldStateData } from "@/lib/types/interview";
 import { Play, Send, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
-function parseMission(reply: string): { title: string; scenario: string; difficulty: number; competency: string } | null {
-  const missionMatch = reply.match(/Mission:\s*(.+)/i);
-  const dayMatch = reply.match(/Curriculum Day\s+(\d+)\s*[·•-]\s*(.+?)\s*[·•-]\s*(\w+)/i);
-  const scenarioMatch = reply.match(/Scenario:\s*([\s\S]*?)(?:\nContext:|\nConstraints:|$)/i);
-  if (!missionMatch) return null;
-  const difficultyLabel = dayMatch?.[3]?.toLowerCase() || "intermediate";
-  const difficulty = { basic: 1, intermediate: 2, advanced: 3, expert: 4 }[difficultyLabel] || 2;
-  return {
-    title: missionMatch[1].trim(),
-    scenario: (scenarioMatch?.[1] || reply).trim(),
-    difficulty,
-    competency: dayMatch?.[2]?.trim() || "AI Engineering",
-  };
+function difficultyToLevel(label?: string | null): number {
+  const map: Record<string, number> = { basic: 1, intermediate: 2, advanced: 3, expert: 4 };
+  return map[(label || "intermediate").toLowerCase()] || 2;
 }
 
-function parseWorldMetrics(reply: string): { summary: string; metrics: Record<string, string>; version: number } | null {
-  const summaryMatch = reply.match(/System state[\s\S]*?(?:\.|$)/i);
-  if (!summaryMatch && !/latency/i.test(reply)) return null;
-  const summary = summaryMatch?.[0] || "Live system state updating with candidate decisions.";
-  const latency = reply.match(/latency\s+(\d+)ms/i)?.[1];
-  const memory = reply.match(/memory\s+(\d+)%/i)?.[1];
-  const cache = reply.match(/cache hit\s+(\d+)%/i)?.[1];
-  const recall = reply.match(/recall\s+([0-9.]+)/i)?.[1];
+function metricsFromWorld(world?: WorldStateData | null): Record<string, string> {
+  if (!world?.system_state) return {};
   const metrics: Record<string, string> = {};
-  if (latency) metrics["Latency"] = `${latency}ms`;
-  if (memory) metrics["Memory"] = `${memory}%`;
-  if (cache) metrics["Cache Hit"] = `${cache}%`;
-  if (recall) metrics["Recall"] = recall;
-  return { summary, metrics, version: Object.keys(metrics).length || 1 };
+  const state = world.system_state;
+  if (state.latency_ms != null) metrics["Latency"] = `${state.latency_ms}ms`;
+  if (state.memory_usage_pct != null) metrics["Memory"] = `${state.memory_usage_pct}%`;
+  if (state.cache_hit_pct != null) metrics["Cache Hit"] = `${state.cache_hit_pct}%`;
+  if (state.recall_score != null) metrics["Recall"] = String(state.recall_score);
+  if (state.error_rate_pct != null) metrics["Error Rate"] = `${state.error_rate_pct}%`;
+  return metrics;
 }
 
 export default function AssessmentPage() {
@@ -54,10 +40,20 @@ export default function AssessmentPage() {
   const [message, setMessage] = useState("");
   const [turns, setTurns] = useState<{ sender: "interviewer" | "candidate"; text: string }[]>([]);
   const [finalReport, setFinalReport] = useState<InterviewResponse["feedback"] | null>(null);
-  const [latestReply, setLatestReply] = useState("");
+  const [mission, setMission] = useState<MissionData | null>(null);
+  const [world, setWorld] = useState<WorldStateData | null>(null);
+  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [mode, setMode] = useState<string | null>(null);
 
-  const mission = useMemo(() => parseMission(latestReply), [latestReply]);
-  const world = useMemo(() => parseWorldMetrics(latestReply), [latestReply]);
+  const applyResponse = (res: InterviewResponse) => {
+    setMission(res.mission || null);
+    setWorld(res.world_state || null);
+    setProgress(res.progress || null);
+    setMode(res.mode || null);
+    if (res.done && res.feedback) {
+      setFinalReport(res.feedback);
+    }
+  };
 
   const handleStart = async () => {
     setLoading(true);
@@ -81,11 +77,8 @@ export default function AssessmentPage() {
       });
 
       setActiveSession(true);
-      setLatestReply(res.reply);
       setTurns([{ sender: "interviewer", text: res.reply }]);
-      if (res.done && res.feedback) {
-        setFinalReport(res.feedback);
-      }
+      applyResponse(res);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(`${err.message} (${err.code})`);
@@ -113,11 +106,8 @@ export default function AssessmentPage() {
         message: userMsg,
       });
 
-      setLatestReply(res.reply);
       setTurns((prev) => [...prev, { sender: "interviewer", text: res.reply }]);
-      if (res.done && res.feedback) {
-        setFinalReport(res.feedback);
-      }
+      applyResponse(res);
     } catch (err) {
       if (err instanceof ApiClientError) {
         setError(`${err.message} (${err.code})`);
@@ -134,7 +124,10 @@ export default function AssessmentPage() {
     setActiveSession(false);
     setTurns([]);
     setFinalReport(null);
-    setLatestReply("");
+    setMission(null);
+    setWorld(null);
+    setProgress(null);
+    setMode(null);
     setSessionId(`session-${Date.now()}`);
   };
 
@@ -159,8 +152,8 @@ export default function AssessmentPage() {
           </Button>
         ) : (
           <div className="flex items-center gap-2">
-            <Badge variant={finalReport ? "success" : "success"} className="px-3 py-1 text-sm">
-              {finalReport ? "Session Complete" : "Session Active"}
+            <Badge variant="success" className="px-3 py-1 text-sm">
+              {finalReport ? "Session Complete" : mode ? `Active · ${mode}` : "Session Active"}
             </Badge>
             <Button variant="ghost" onClick={handleRetry} size="sm">
               Reset
@@ -225,11 +218,25 @@ export default function AssessmentPage() {
             </Card>
           ) : (
             <>
+              {progress && (
+                <Card>
+                  <CardHeader title="Interview Progress" subtitle="Coverage against minimum requirements" />
+                  <div className="text-xs text-slate-300 space-y-1 font-mono">
+                    <p>
+                      Questions: {progress.question_number} / {progress.minimum_questions}
+                    </p>
+                    <p>
+                      Curriculum days: {progress.curriculum_days_covered} / {progress.minimum_curriculum_days}
+                    </p>
+                    <p>Covered: {progress.covered_curriculum_days.join(", ") || "—"}</p>
+                  </div>
+                </Card>
+              )}
               {mission ? (
                 <MissionCard
                   title={mission.title}
                   scenario={mission.scenario}
-                  difficulty={mission.difficulty}
+                  difficulty={difficultyToLevel(mission.difficulty)}
                   competency={mission.competency}
                 />
               ) : (
@@ -238,7 +245,11 @@ export default function AssessmentPage() {
                 </Card>
               )}
               {world ? (
-                <WorldStateViewer version={world.version} summary={world.summary} metrics={world.metrics} />
+                <WorldStateViewer
+                  version={world.version}
+                  summary={world.visible_summary}
+                  metrics={metricsFromWorld(world)}
+                />
               ) : null}
             </>
           )}
@@ -305,6 +316,9 @@ export default function AssessmentPage() {
               <CardHeader title="Assessment Summary & Feedback" subtitle="Evidence-based report" />
               <div className="space-y-3 text-sm">
                 <p className="text-slate-200">{finalReport.summary}</p>
+                {finalReport.hiring_assessment && (
+                  <p className="text-slate-300 text-xs">{finalReport.hiring_assessment}</p>
+                )}
                 <div>
                   <h4 className="font-semibold text-emerald-400 text-xs uppercase tracking-wider">Strengths</h4>
                   <ul className="list-disc list-inside text-slate-300 text-xs mt-1">
@@ -329,6 +343,18 @@ export default function AssessmentPage() {
                     ))}
                   </ul>
                 </div>
+                {finalReport.engineering_dna && Object.keys(finalReport.engineering_dna).length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-violet-300 text-xs uppercase tracking-wider">Engineering DNA</h4>
+                    <ul className="list-disc list-inside text-slate-300 text-xs mt-1">
+                      {Object.entries(finalReport.engineering_dna).map(([k, v]) => (
+                        <li key={k}>
+                          {k}: {v.toFixed(2)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </Card>
           )}
