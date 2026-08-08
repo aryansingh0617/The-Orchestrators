@@ -325,7 +325,7 @@ export default function InterviewTerminalPage() {
 
             {/* Audio Synthesis Hardware Box */}
             <div className="glass-well rounded-2xl p-4 border border-white/15">
-              <h3 className="font-bitcount text-xs font-normal text-slate-200 uppercase mb-3 flex items-center gap-2">
+              <h3 className="font-[#E05454] text-xs font-normal text-slate-200 uppercase mb-3 flex items-center gap-2">
                 <Mic className="w-4 h-4 text-[#E05454]" />
                 Neural Audio Synthesizer
               </h3>
