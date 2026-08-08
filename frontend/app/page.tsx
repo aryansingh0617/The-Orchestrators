@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -10,23 +10,59 @@ import { sendInterviewTurn, ApiClientError } from "@/lib/api/client";
 import { InterviewResponse } from "@/lib/types/interview";
 import { Play, Send, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
+function parseMission(reply: string): { title: string; scenario: string; difficulty: number; competency: string } | null {
+  const missionMatch = reply.match(/Mission:\s*(.+)/i);
+  const dayMatch = reply.match(/Curriculum Day\s+(\d+)\s*[·•-]\s*(.+?)\s*[·•-]\s*(\w+)/i);
+  const scenarioMatch = reply.match(/Scenario:\s*([\s\S]*?)(?:\nContext:|\nConstraints:|$)/i);
+  if (!missionMatch) return null;
+  const difficultyLabel = dayMatch?.[3]?.toLowerCase() || "intermediate";
+  const difficulty = { basic: 1, intermediate: 2, advanced: 3, expert: 4 }[difficultyLabel] || 2;
+  return {
+    title: missionMatch[1].trim(),
+    scenario: (scenarioMatch?.[1] || reply).trim(),
+    difficulty,
+    competency: dayMatch?.[2]?.trim() || "AI Engineering",
+  };
+}
+
+function parseWorldMetrics(reply: string): { summary: string; metrics: Record<string, string>; version: number } | null {
+  const summaryMatch = reply.match(/System state[\s\S]*?(?:\.|$)/i);
+  if (!summaryMatch && !/latency/i.test(reply)) return null;
+  const summary = summaryMatch?.[0] || "Live system state updating with candidate decisions.";
+  const latency = reply.match(/latency\s+(\d+)ms/i)?.[1];
+  const memory = reply.match(/memory\s+(\d+)%/i)?.[1];
+  const cache = reply.match(/cache hit\s+(\d+)%/i)?.[1];
+  const recall = reply.match(/recall\s+([0-9.]+)/i)?.[1];
+  const metrics: Record<string, string> = {};
+  if (latency) metrics["Latency"] = `${latency}ms`;
+  if (memory) metrics["Memory"] = `${memory}%`;
+  if (cache) metrics["Cache Hit"] = `${cache}%`;
+  if (recall) metrics["Recall"] = recall;
+  return { summary, metrics, version: Object.keys(metrics).length || 1 };
+}
+
 export default function AssessmentPage() {
-  const [sessionId, setSessionId] = useState("session-demo-001");
+  const [sessionId, setSessionId] = useState(`session-${Date.now()}`);
   const [candidateName, setCandidateName] = useState("Emily Chen");
   const [jobRole, setJobRole] = useState("AI Engineer");
   const [yearsExp, setYearsExp] = useState(6);
-  
+
   const [activeSession, setActiveSession] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [message, setMessage] = useState("");
   const [turns, setTurns] = useState<{ sender: "interviewer" | "candidate"; text: string }[]>([]);
   const [finalReport, setFinalReport] = useState<InterviewResponse["feedback"] | null>(null);
+  const [latestReply, setLatestReply] = useState("");
+
+  const mission = useMemo(() => parseMission(latestReply), [latestReply]);
+  const world = useMemo(() => parseWorldMetrics(latestReply), [latestReply]);
 
   const handleStart = async () => {
     setLoading(true);
     setError(null);
+    setFinalReport(null);
     try {
       const res = await sendInterviewTurn({
         sessionId,
@@ -45,6 +81,7 @@ export default function AssessmentPage() {
       });
 
       setActiveSession(true);
+      setLatestReply(res.reply);
       setTurns([{ sender: "interviewer", text: res.reply }]);
       if (res.done && res.feedback) {
         setFinalReport(res.feedback);
@@ -76,6 +113,7 @@ export default function AssessmentPage() {
         message: userMsg,
       });
 
+      setLatestReply(res.reply);
       setTurns((prev) => [...prev, { sender: "interviewer", text: res.reply }]);
       if (res.done && res.feedback) {
         setFinalReport(res.feedback);
@@ -91,9 +129,17 @@ export default function AssessmentPage() {
     }
   };
 
+  const handleRetry = () => {
+    setError(null);
+    setActiveSession(false);
+    setTurns([]);
+    setFinalReport(null);
+    setLatestReply("");
+    setSessionId(`session-${Date.now()}`);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 glass-panel rounded-2xl border-sky-500/20 bg-gradient-to-r from-slate-900 via-slate-900 to-sky-950/40">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -112,20 +158,28 @@ export default function AssessmentPage() {
             Initialize Session
           </Button>
         ) : (
-          <Badge variant="success" className="px-3 py-1 text-sm">Session Active</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={finalReport ? "success" : "success"} className="px-3 py-1 text-sm">
+              {finalReport ? "Session Complete" : "Session Active"}
+            </Badge>
+            <Button variant="ghost" onClick={handleRetry} size="sm">
+              Reset
+            </Button>
+          </div>
         )}
       </div>
 
       {error && (
         <div className="p-4 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-sm flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
-          <span>{error}</span>
+          <span className="flex-1">{error}</span>
+          <Button variant="ghost" size="sm" onClick={handleRetry}>
+            Retry
+          </Button>
         </div>
       )}
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Setup & World State */}
         <div className="space-y-6 lg:col-span-1">
           {!activeSession ? (
             <Card>
@@ -171,35 +225,41 @@ export default function AssessmentPage() {
             </Card>
           ) : (
             <>
-              <MissionCard
-                title="RAG Index Refresh Incident"
-                scenario="Post-index refresh, customer queries exhibit latency spikes and reduced chunk recall. Diagnose root cause and propose production-ready mitigations."
-                difficulty={3}
-                competency="Retrieval Systems & Observability"
-              />
-              <WorldStateViewer
-                version={1}
-                summary="Index updated at 08:00 UTC. Chunk size reduced to 256 tokens. Vector cache hit rate dropped 42%."
-                metrics={{ "Vector Latency": "340ms", "Cache Hit %": "58%", "Recall Score": "0.71" }}
-              />
+              {mission ? (
+                <MissionCard
+                  title={mission.title}
+                  scenario={mission.scenario}
+                  difficulty={mission.difficulty}
+                  competency={mission.competency}
+                />
+              ) : (
+                <Card>
+                  <CardHeader title="Awaiting Mission" subtitle="Mission details appear after the interviewer responds." />
+                </Card>
+              )}
+              {world ? (
+                <WorldStateViewer version={world.version} summary={world.summary} metrics={world.metrics} />
+              ) : null}
             </>
           )}
         </div>
 
-        {/* Center & Right: Interview Console & Dialogue */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="min-h-[480px] flex flex-col justify-between">
             <CardHeader
               title="Interactive Engineering Console"
-              subtitle={activeSession ? "Respond with debugging hypotheses, architecture choices, or commands." : "Session pending initialization."}
+              subtitle={
+                activeSession
+                  ? "Respond with debugging hypotheses, architecture choices, or commands."
+                  : "Session pending initialization."
+              }
             />
 
-            {/* Dialogue stream */}
             <div className="flex-1 space-y-4 overflow-y-auto max-h-[380px] pr-2 my-4">
               {turns.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-500 py-12">
                   <CheckCircle2 className="w-12 h-12 mb-2 stroke-1 text-slate-600" />
-                  <p className="text-sm">Click "Initialize Session" to launch candidate assessment.</p>
+                  <p className="text-sm">Click &quot;Initialize Session&quot; to launch candidate assessment.</p>
                 </div>
               ) : (
                 turns.map((t, idx) => (
@@ -223,8 +283,7 @@ export default function AssessmentPage() {
               )}
             </div>
 
-            {/* Input Form */}
-            {activeSession && (
+            {activeSession && !finalReport && (
               <form onSubmit={handleSendTurn} className="flex gap-3 pt-4 border-t border-slate-800">
                 <input
                   type="text"
@@ -241,7 +300,6 @@ export default function AssessmentPage() {
             )}
           </Card>
 
-          {/* Final Feedback Display if interview completed */}
           {finalReport && (
             <Card className="border-emerald-500/30 bg-emerald-950/20">
               <CardHeader title="Assessment Summary & Feedback" subtitle="Evidence-based report" />
@@ -250,13 +308,25 @@ export default function AssessmentPage() {
                 <div>
                   <h4 className="font-semibold text-emerald-400 text-xs uppercase tracking-wider">Strengths</h4>
                   <ul className="list-disc list-inside text-slate-300 text-xs mt-1">
-                    {finalReport.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                    {finalReport.strengths.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-amber-400 text-xs uppercase tracking-wider">Gaps</h4>
                   <ul className="list-disc list-inside text-slate-300 text-xs mt-1">
-                    {finalReport.gaps.map((g, i) => <li key={i}>{g}</li>)}
+                    {finalReport.gaps.map((g, i) => (
+                      <li key={i}>{g}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sky-400 text-xs uppercase tracking-wider">Next Steps</h4>
+                  <ul className="list-disc list-inside text-slate-300 text-xs mt-1">
+                    {finalReport.next.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
