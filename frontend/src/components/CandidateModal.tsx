@@ -33,15 +33,15 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
   const skippedMissions = candidate.skippedMissions;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200 font-bitcount">
       {/* Dark Blur Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-[#443199]/75 backdrop-blur-xl transition-opacity"
+        className="fixed inset-0 bg-[#130a24]/85 backdrop-blur-xl transition-opacity"
       />
 
       {/* Glassmorphic Modal Frame */}
-      <div className="glass-modal relative w-full max-w-3xl z-10 p-6 sm:p-8 max-h-[90vh] overflow-y-auto my-auto border border-[#C13383]/40 shadow-[0_35px_90px_rgba(0,0,0,0.95)]">
+      <div className="glass-modal relative w-full max-w-3xl z-10 p-6 sm:p-8 max-h-[90vh] overflow-y-auto my-auto border border-white/30 shadow-[0_40px_100px_rgba(0,0,0,0.95)]">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -52,10 +52,10 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
         </button>
 
         {/* Top Header Badge */}
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/15">
-          <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-[#E05454]/40 bg-[#E05454]/15">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/20">
+          <div className="glass-badge px-3.5 py-1 flex items-center gap-2 border border-[#E05454]/50 bg-[#E05454]/20">
             <span className="w-2 h-2 rounded-full bg-[#E05454] animate-pulse" />
-            <span className="font-bitcount text-xs font-normal text-white uppercase tracking-widest">
+            <span className="font-bitcount text-xs font-normal text-white uppercase tracking-widest drop-shadow-sm">
               CHIMERA DOSSIER // {candidate.id}
             </span>
           </div>
@@ -75,21 +75,21 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
 
             <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl sm:text-3xl font-light font-bitcount text-white text-glow-coral">
+                <h2 className="text-2xl sm:text-3xl font-light font-bitcount text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                   {candidate.name}
                 </h2>
-                <span className="text-xs font-bitcount font-normal px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-xs font-bitcount font-normal px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
                   {candidate.status}
                 </span>
               </div>
-              <p className="text-sm font-normal text-[#C13383] mt-1 flex items-center gap-1.5 font-bitcount">
+              <p className="text-sm font-normal text-[#D6D6D6] mt-1 flex items-center gap-1.5 font-bitcount drop-shadow-sm">
                 <Briefcase className="w-4 h-4 text-[#E05454]" />
                 {candidate.jobRole}
               </p>
               <div className="flex flex-wrap items-center gap-3 text-xs font-bitcount text-slate-200 mt-1.5">
-                <span>{candidate.yearsExperience} Yrs Experience</span>
+                <span className="drop-shadow-sm">{candidate.yearsExperience} Yrs Experience</span>
                 <span>•</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 drop-shadow-sm">
                   <GraduationCap className="w-3.5 h-3.5 text-[#C13383]" />
                   {candidate.education}
                 </span>
@@ -98,13 +98,13 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
           </div>
 
           {/* Assessment Score Badge */}
-          <div className="glass-well p-4 rounded-2xl border border-[#E05454]/40 bg-[#E05454]/15 flex items-center gap-3 self-stretch sm:self-auto justify-center">
+          <div className="glass-well p-4 rounded-2xl border border-[#E05454]/50 bg-[#E05454]/20 flex items-center gap-3 self-stretch sm:self-auto justify-center">
             <Award className="w-8 h-8 text-[#E05454] shrink-0" />
             <div>
-              <div className="text-[10px] font-bitcount uppercase text-slate-300">
+              <div className="text-[10px] font-bitcount uppercase text-[#D6D6D6]">
                 RATING
               </div>
-              <div className="text-2xl font-normal font-bitcount text-white">
+              <div className="text-2xl font-normal font-bitcount text-white drop-shadow-sm">
                 {candidate.overallScore} / 100
               </div>
             </div>
@@ -113,27 +113,27 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
 
         {/* Signals Overview Grid */}
         <div className="grid grid-cols-3 gap-3 mb-6 font-bitcount">
-          <div className="glass-well p-3.5 rounded-xl text-center border border-white/15">
-            <div className="text-[10px] text-slate-300 uppercase mb-1">
+          <div className="glass-well p-3.5 rounded-xl text-center border border-white/20">
+            <div className="text-[10px] text-[#D6D6D6] uppercase mb-1">
               Commit Days
             </div>
-            <div className="text-lg font-normal text-[#C13383]">
+            <div className="text-lg font-normal text-white drop-shadow-sm">
               {candidate.signals.commitDays} / 31
             </div>
           </div>
-          <div className="glass-well p-3.5 rounded-xl text-center border border-white/15">
-            <div className="text-[10px] text-slate-300 uppercase mb-1">
+          <div className="glass-well p-3.5 rounded-xl text-center border border-white/20">
+            <div className="text-[10px] text-[#D6D6D6] uppercase mb-1">
               Missions Passed
             </div>
-            <div className="text-lg font-normal text-emerald-300">
+            <div className="text-lg font-normal text-emerald-300 drop-shadow-sm">
               {candidate.signals.missionsCompleted} / 31
             </div>
           </div>
-          <div className="glass-well p-3.5 rounded-xl text-center border border-white/15">
-            <div className="text-[10px] text-slate-300 uppercase mb-1">
+          <div className="glass-well p-3.5 rounded-xl text-center border border-white/20">
+            <div className="text-[10px] text-[#D6D6D6] uppercase mb-1">
               1st Try Accuracy
             </div>
-            <div className="text-lg font-normal text-[#E05454]">
+            <div className="text-lg font-normal text-[#E05454] drop-shadow-sm">
               {candidate.signals.missionsFirstTry} ({candidate.firstTryRate}%)
             </div>
           </div>
@@ -141,46 +141,46 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
 
         {/* Missions Breakdown List */}
         <div className="mb-8 font-bitcount">
-          <div className="flex items-center justify-between text-xs text-slate-200 uppercase mb-3">
+          <div className="flex items-center justify-between text-xs text-white uppercase mb-3 drop-shadow-sm">
             <span className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-[#E05454]" />
               Evaluated Curriculum Missions Log ({candidate.missions.length})
             </span>
-            <span className="text-slate-300 text-[11px]">
+            <span className="text-[#D6D6D6] text-[11px]">
               {passedMissions.length} Passed • {skippedMissions.length} Skipped
             </span>
           </div>
 
-          <div className="glass-well rounded-xl p-4 space-y-2.5 max-h-64 overflow-y-auto border border-white/15">
+          <div className="glass-well rounded-xl p-4 space-y-2.5 max-h-64 overflow-y-auto border border-white/20">
             {candidate.missions.map((m, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-white/10 border border-white/10 hover:border-white/20 transition-colors"
+                className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-white/10 border border-white/15 hover:border-white/30 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[10px] text-slate-200 bg-white/15 px-2 py-0.5 rounded shrink-0">
+                  <span className="text-[10px] text-white bg-white/20 px-2 py-0.5 rounded shrink-0">
                     DAY {m.day}
                   </span>
-                  <span className="text-slate-100 truncate">
+                  <span className="text-white font-normal truncate drop-shadow-sm">
                     {m.title}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
                   {m.passed && (
-                    <span className="flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-500/30">
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-300 bg-emerald-500/25 px-2 py-0.5 rounded border border-emerald-500/40">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       PASSED ({m.attempts || 1} {m.attempts === 1 ? 'try' : 'tries'})
                     </span>
                   )}
                   {m.skipped && (
-                    <span className="flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                    <span className="flex items-center gap-1 text-[11px] text-amber-300 bg-amber-500/25 px-2 py-0.5 rounded border border-amber-500/40">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       SKIPPED
                     </span>
                   )}
                   {!m.passed && !m.skipped && (
-                    <span className="flex items-center gap-1 text-[11px] text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">
+                    <span className="flex items-center gap-1 text-[11px] text-rose-300 bg-rose-500/25 px-2 py-0.5 rounded border border-rose-500/40">
                       FAILED ({m.attempts} tries)
                     </span>
                   )}
@@ -191,8 +191,8 @@ export function CandidateModal({ candidate, onClose }: CandidateModalProps) {
         </div>
 
         {/* Action Push Button */}
-        <div className="pt-2 border-t border-white/15 text-center">
-          <p className="text-xs font-bitcount text-slate-300 uppercase tracking-widest mb-4">
+        <div className="pt-2 border-t border-white/20 text-center">
+          <p className="text-xs font-bitcount text-[#D6D6D6] uppercase tracking-widest mb-4 drop-shadow-sm">
             Initialize AI Candidate Assessment Simulation
           </p>
           <TactileButton candidateId={candidate.id} size="xl" />
