@@ -26,11 +26,11 @@ def test_interview_start_contract(client: TestClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "reply": "Welcome. Let's begin your interview.",
-        "done": False,
-        "feedback": None,
-    }
+    body = response.json()
+    assert body["done"] is False
+    assert body["feedback"] is None
+    assert "Welcome" in body["reply"]
+    assert "Mission:" in body["reply"]
 
 
 def test_interview_turn_contract_after_start(client: TestClient) -> None:
@@ -46,7 +46,10 @@ def test_interview_turn_contract_after_start(client: TestClient) -> None:
         "/api/interview",
         json={
             "sessionId": "abc-123",
-            "message": "I would inspect retrieval logs before changing prompts.",
+            "message": (
+                "I would inspect retrieval logs and traces before changing prompts, "
+                "compare recall metrics, and consider a rollback if quality drops."
+            ),
         },
     )
 
@@ -54,7 +57,7 @@ def test_interview_turn_contract_after_start(client: TestClient) -> None:
     assert response.status_code == 200
     assert body["done"] is False
     assert body["feedback"] is None
-    assert "Milestone 3 backend is wired." in body["reply"]
+    assert "Mission:" in body["reply"] or "Follow-up" in body["reply"] or "System state" in body["reply"]
 
 
 def test_interview_requires_candidate_for_unknown_session(client: TestClient) -> None:
@@ -73,3 +76,18 @@ def test_interview_requires_candidate_for_unknown_session(client: TestClient) ->
             "trace_id": "trace-test",
         }
     }
+
+
+def test_interview_empty_message_rejected(client: TestClient) -> None:
+    client.post(
+        "/api/interview",
+        json={
+            "sessionId": "empty-msg",
+            "candidate": {"member": {"id": "CAND-1"}, "missions": [], "signals": {}},
+        },
+    )
+    response = client.post(
+        "/api/interview",
+        json={"sessionId": "empty-msg", "message": "   "},
+    )
+    assert response.status_code == 400

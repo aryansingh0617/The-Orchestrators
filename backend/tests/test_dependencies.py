@@ -5,7 +5,14 @@ from app.api.dependencies import (
     get_interview_service,
 )
 from app.core.settings import Settings
-from app.infrastructure.repositories import InMemorySessionRepository
+from app.infrastructure.repositories import (
+    InMemoryEvidenceRepository,
+    InMemoryMemoryRepository,
+    InMemoryMissionRepository,
+    InMemorySessionRepository,
+    InMemoryTurnRepository,
+    InMemoryWorldStateRepository,
+)
 
 
 def test_dependency_wiring_creates_interview_service() -> None:
@@ -15,6 +22,11 @@ def test_dependency_wiring_creates_interview_service() -> None:
         ai_provider=get_ai_provider(settings),
         clock=get_clock(),
         id_generator=get_id_generator(),
+        turns=InMemoryTurnRepository(),
+        evidence=InMemoryEvidenceRepository(),
+        memory_repo=InMemoryMemoryRepository(),
+        missions=InMemoryMissionRepository(),
+        world_states=InMemoryWorldStateRepository(),
     )
 
     assert service is not None
