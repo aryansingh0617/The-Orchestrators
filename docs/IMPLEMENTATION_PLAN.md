@@ -58,11 +58,13 @@ Scope:
 - define domain models and interfaces
 - wire dependency injection placeholders
 - add stub AI provider
+- define the `POST /api/interview` route contract without full module behavior
 
 Tests:
 
 - app import test
 - health endpoint test
+- interview endpoint schema test
 - dependency wiring test
 
 Commit:
@@ -221,9 +223,9 @@ Commit:
 
 Scope:
 
-- implement session endpoints
-- implement turn processing endpoint
-- implement report endpoint
+- complete the required `POST /api/interview` endpoint
+- route start, turn, and completion requests through internal services
+- persist state by supplied `sessionId`
 - add OpenAPI examples
 
 Tests:
@@ -234,7 +236,7 @@ Tests:
 
 Commit:
 
-- `feat(api): implement assessment endpoints`
+- `feat(api): implement interview endpoint`
 
 ## Milestone 13: Frontend Integration
 
@@ -337,4 +339,3 @@ Commit:
 - No frontend component may duplicate backend scoring rules.
 - No milestone may proceed with a dirty worktree.
 - No push should overwrite remote history.
-

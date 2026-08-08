@@ -60,7 +60,7 @@ Infrastructure depends inward on application/domain interfaces.
 
 ## API Layer
 
-Exposes FastAPI routes and OpenAPI documentation.
+Exposes the FastAPI route and OpenAPI documentation required by the hackathon contract.
 
 Responsibilities:
 
@@ -68,9 +68,9 @@ Responsibilities:
 - response shaping
 - dependency wiring
 - error mapping
-- auth hooks when added
+- session dispatch through `sessionId`
 
-API routes call application services, never infrastructure directly.
+The public API surface is intentionally one endpoint: `POST /api/interview`. That endpoint calls application services and never infrastructure directly.
 
 ## Frontend Layer
 

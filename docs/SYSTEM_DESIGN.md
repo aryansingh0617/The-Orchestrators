@@ -15,6 +15,7 @@ Represents one candidate assessment.
 Fields:
 
 - session ID
+- external sessionId from the API request
 - candidate ID
 - role target
 - seniority target
@@ -462,6 +463,8 @@ Unit tests:
 
 ## Key Design Invariants
 
+- The public hackathon API exposes only `POST /api/interview`.
+- The provided `sessionId` is the external state key for the interview.
 - Every turn has exactly one before and after world state snapshot.
 - Every evaluation score references at least one evidence item.
 - Candidate-facing feedback never includes hidden evaluator notes.
