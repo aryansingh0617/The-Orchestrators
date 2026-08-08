@@ -23,6 +23,12 @@ Demo seed curriculum:
 Evaluate senior AI engineers on RAG debugging, LLM evaluation, production observability, latency/cost tradeoffs, prompt and retrieval design, and communication during incidents.
 ```
 
+Hackathon API:
+
+```text
+POST /api/interview
+```
+
 ## Story Arc
 
 ## 1. Open With the Product Thesis
@@ -41,8 +47,8 @@ Show:
 
 Action:
 
-- create session
-- generate plan
+- send the first `POST /api/interview` request with `sessionId` and a candidate object
+- initialize the session, analyze the candidate, and generate the first mission internally
 
 Show:
 
@@ -173,4 +179,3 @@ If final report generation fails:
 ## Closing Line
 
 "Chimera evaluates how engineers think inside changing systems. That is the difference between asking interview questions and running an assessment operating system."
-

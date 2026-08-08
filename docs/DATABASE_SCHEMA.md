@@ -41,6 +41,7 @@ Stores one assessment instance.
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | UUID | Primary key |
+| external_session_id | String | Supplied `sessionId`, unique |
 | candidate_id | UUID | FK to candidates |
 | role_title | String | Required |
 | seniority | String | Required |
@@ -54,6 +55,7 @@ Stores one assessment instance.
 
 Indexes:
 
+- `idx_sessions_external_session_id`
 - `idx_sessions_candidate_id`
 - `idx_sessions_status`
 - `idx_sessions_created_at`
@@ -253,4 +255,3 @@ MVP retention is manual. Production retention should support:
 - anonymized aggregate analytics
 - report export before deletion
 - audit logs for deletion actions
-

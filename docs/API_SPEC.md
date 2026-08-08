@@ -1,313 +1,191 @@
 # API Specification
 
-## API Style
+## Hackathon Contract
 
-The backend exposes REST endpoints through FastAPI. All request and response bodies use Pydantic models. OpenAPI documentation must include descriptions, examples, response codes, and validation constraints.
+The required public API exposes exactly one unauthenticated endpoint:
 
-Base URL:
-
-- local backend: `http://localhost:8000`
-
-## Common Error Envelope
-
-```json
-{
-  "error": {
-    "code": "validation_error",
-    "message": "The request body is invalid.",
-    "details": {},
-    "trace_id": "trace_123"
-  }
-}
+```text
+POST /api/interview
 ```
 
-## Status Codes
+The endpoint maintains interview state with the provided `sessionId`. All internal planning, mission generation, world state, memory, evidence, evaluation, and feedback services operate behind this endpoint for the hackathon submission.
 
-| Code | Meaning |
-| --- | --- |
-| 200 | Successful read or command result |
-| 201 | Resource created |
-| 400 | Invalid domain command |
-| 404 | Resource not found |
-| 409 | State conflict |
-| 422 | Request validation error |
-| 503 | AI provider or dependency unavailable |
+No authentication is required for the hackathon contract.
 
-## Endpoints
+## Design Decision
 
-## GET /health
+Chimera keeps the assessment operating-system architecture internally while presenting the simple required agent API externally.
 
-Purpose: Verify service availability.
+- Public API: single `POST /api/interview` endpoint.
+- Internal services: session management, planner, memory, world state, evidence, evaluation, and feedback modules.
+- Persistence key: `sessionId` from the request.
+- Candidate source: first request contains the supplied candidate object.
+- Curriculum source: loaded from the supplied curriculum resource or configured fixture.
 
-Response example:
+## Start Interview
+
+The first request initializes a new interview session.
 
 ```json
 {
-  "status": "ok",
-  "service": "chimera-api",
-  "version": "0.1.0"
-}
-```
-
-## POST /api/sessions
-
-Purpose: Create an assessment session.
-
-Request:
-
-```json
-{
+  "sessionId": "abc-123",
   "candidate": {
-    "display_name": "Riya Shah",
-    "email": "riya@example.com",
-    "profile_summary": "Backend engineer with LLM application experience."
-  },
-  "role_title": "AI Engineer",
-  "seniority": "senior",
-  "curriculum_source": "RAG systems, evaluation, observability, deployment tradeoffs.",
-  "assessment_mode": "demo",
-  "time_budget_minutes": 30
-}
-```
-
-Response:
-
-```json
-{
-  "session_id": "session_123",
-  "status": "draft",
-  "candidate_id": "candidate_123"
-}
-```
-
-Validation:
-
-- `role_title` is required
-- `seniority` must be supported
-- `curriculum_source` cannot be empty
-- `time_budget_minutes` must be between 10 and 180
-
-Errors:
-
-- `422` for malformed request
-- `400` for unsupported assessment mode
-
-## POST /api/sessions/{session_id}/plan
-
-Purpose: Analyze curriculum and create a mission plan.
-
-Request:
-
-```json
-{
-  "force_replan": false
-}
-```
-
-Response:
-
-```json
-{
-  "session_id": "session_123",
-  "plan_id": "plan_123",
-  "status": "planned",
-  "competencies": [
-    {
-      "name": "debugging",
-      "priority": 1,
-      "expected_level": "senior"
+    "member": {
+      "id": "CAND-003",
+      "name": "Emily Chen",
+      "jobRole": "AI Engineer",
+      "yearsExperience": 6,
+      "education": "MS Artificial Intelligence",
+      "status": "COMPLETED"
+    },
+    "missions": [
+      {
+        "day": 7,
+        "title": "Embeddings Explained",
+        "passed": true,
+        "attempts": 1
+      }
+    ],
+    "signals": {
+      "commitDays": 31,
+      "missionsCompleted": 31,
+      "missionsFirstTry": 30
     }
-  ],
-  "missions": [
-    {
-      "mission_id": "mission_123",
-      "title": "Diagnose a failing RAG incident",
-      "difficulty": 3,
-      "targets": ["debugging", "systems_thinking"]
-    }
-  ]
-}
-```
-
-Errors:
-
-- `404` if session is missing
-- `409` if session is already active and `force_replan` is false
-- `503` if provider fails and no fallback is available
-
-## POST /api/sessions/{session_id}/start
-
-Purpose: Start a planned assessment.
-
-Response:
-
-```json
-{
-  "session_id": "session_123",
-  "status": "active",
-  "current_mission": {
-    "mission_id": "mission_123",
-    "title": "Diagnose a failing RAG incident",
-    "prompt": "A support assistant is producing plausible but unsupported answers after a retrieval deployment. Walk through your investigation."
-  },
-  "world_state": {
-    "visible_summary": "Customer escalations increased after yesterday's retrieval index refresh."
   }
 }
 ```
 
-Errors:
+Rules:
 
-- `409` if the session has not been planned
-
-## POST /api/sessions/{session_id}/turns
-
-Purpose: Submit a candidate response and receive the next mission update.
-
-Request:
-
-```json
-{
-  "mission_id": "mission_123",
-  "candidate_response": "I would first compare retrieved chunks before and after the index refresh, inspect eval failures, and check whether citations map to source documents.",
-  "client_sequence_number": 1
-}
-```
+- `sessionId` is required.
+- `candidate` is required only on the first request for a session.
+- The candidate object follows the attached `candidates.json` candidate-entry schema.
+- The backend initializes internal session state, candidate baseline, curriculum targets, and first mission prompt.
 
 Response:
 
 ```json
 {
-  "turn_id": "turn_123",
-  "session_id": "session_123",
-  "mission_id": "mission_123",
-  "accepted": true,
-  "visible_world_update": "The retrieval logs show the new index returns shorter chunks with weaker source coverage.",
-  "next_prompt": "Given those logs, what mitigation would you ship today and what would you measure after release?",
-  "evidence_preview": [
-    {
-      "competency": "debugging",
-      "observation": "Candidate asked to compare retrieval outputs before proposing a fix.",
-      "polarity": "positive"
-    }
-  ]
+  "reply": "Welcome. Let's begin your interview.",
+  "done": false
 }
 ```
 
-Validation:
+Chimera may include a more specific first mission in `reply` as long as the response shape remains compatible.
 
-- `candidate_response` cannot be empty
-- `client_sequence_number` must match the expected next turn
+## Conversation Turn
 
-Errors:
+Subsequent requests contain the candidate's latest response.
 
-- `404` if session or mission is missing
-- `409` for stale sequence number or completed session
-- `503` when processing cannot complete
+```json
+{
+  "sessionId": "abc-123",
+  "message": "I would compare retrieval outputs before and after the index refresh, then inspect failed evaluation examples."
+}
+```
 
-## GET /api/sessions/{session_id}
+Rules:
 
-Purpose: Get session state and progress.
+- `sessionId` must match an existing session.
+- `message` is required for non-initial turns.
+- The backend loads world state, memory, mission progress, and evidence for the session.
+- The backend returns the next adaptive interview reply.
 
 Response:
 
 ```json
 {
-  "session_id": "session_123",
-  "status": "active",
-  "role_title": "AI Engineer",
-  "seniority": "senior",
-  "progress": {
-    "turns_completed": 3,
-    "competencies_touched": 4,
-    "estimated_minutes_remaining": 12
+  "reply": "Good. The retrieval logs show shorter chunks after the refresh. What mitigation would you ship today, and what would you measure after release?",
+  "done": false
+}
+```
+
+## End Interview
+
+When the interview is complete, the endpoint returns `done: true` and feedback.
+
+```json
+{
+  "reply": "Interview completed.",
+  "done": true,
+  "feedback": {
+    "summary": "The candidate showed strong retrieval debugging and production awareness, with some opportunity to deepen cost analysis.",
+    "strengths": [
+      "Compared retrieval behavior before proposing prompt changes.",
+      "Connected mitigation choices to measurable production signals."
+    ],
+    "gaps": [
+      "Could quantify latency and cost tradeoffs earlier."
+    ],
+    "next": [
+      "Practice designing evaluation sets for RAG regressions.",
+      "Prepare examples of observability dashboards for AI systems."
+    ]
   }
 }
 ```
 
-## GET /api/sessions/{session_id}/evidence
+## Response Schema
 
-Purpose: Retrieve evidence collected during the session.
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| reply | string | Yes | Candidate-facing interviewer response |
+| done | boolean | Yes | Whether the interview is complete |
+| feedback | object | Only when done is true | Final candidate feedback |
 
-Response:
+## Feedback Schema
 
-```json
-{
-  "items": [
-    {
-      "evidence_id": "evidence_123",
-      "turn_id": "turn_123",
-      "competency": "debugging",
-      "observation": "Candidate proposed validating retrieval outputs before changing prompts.",
-      "polarity": "positive",
-      "strength": 4,
-      "confidence": 0.88
-    }
-  ]
-}
-```
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| summary | string | Yes | Concise overall assessment |
+| strengths | string[] | Yes | Actionable positive observations |
+| gaps | string[] | Yes | Actionable improvement areas |
+| next | string[] | Yes | Recommended next steps |
 
-## POST /api/sessions/{session_id}/complete
+## Validation and Error Handling
 
-Purpose: Complete assessment and generate final reports.
+The hackathon contract does not define a formal error schema, but Chimera should return predictable JSON.
 
-Response:
+Recommended error response:
 
 ```json
 {
-  "session_id": "session_123",
-  "status": "completed",
-  "report_ids": {
-    "engineering_profile": "report_profile_123",
-    "hiring_recommendation": "report_hiring_123",
-    "candidate_feedback": "report_feedback_123"
-  }
+  "reply": "I could not process that request because the sessionId is missing.",
+  "done": false
 }
 ```
 
-Errors:
+Validation rules:
 
-- `409` if required evidence coverage is insufficient and forced completion is not allowed
+- Missing `sessionId`: return a helpful error reply.
+- Unknown `sessionId` without `candidate`: ask the caller to start with candidate data.
+- Initial request without valid candidate object: return a helpful error reply.
+- Empty `message` on a conversation turn: ask for a response.
+- Provider failure: use deterministic fallback instead of failing the session where possible.
 
-## GET /api/sessions/{session_id}/reports/{report_type}
+## Internal Service Mapping
 
-Purpose: Retrieve a report.
+`POST /api/interview` maps to internal use cases:
 
-Supported report types:
-
-- `engineering_profile`
-- `hiring_recommendation`
-- `candidate_feedback`
-
-Response:
-
-```json
-{
-  "report_type": "hiring_recommendation",
-  "content": {
-    "recommendation": "lean_hire",
-    "confidence": 0.78,
-    "rationale": "Strong debugging and systems evidence; weaker cost analysis evidence.",
-    "evidence_ids": ["evidence_123", "evidence_456"],
-    "human_review_required": true
-  }
-}
-```
-
-Report rules:
-
-- `hiring_recommendation` must include `human_review_required`.
-- Numeric competency scores must include evidence references.
-- Low-coverage reports must return caveats or an insufficient-evidence recommendation.
-- Candidate feedback responses must exclude hidden evaluator notes.
+| API Condition | Internal Use Case |
+| --- | --- |
+| `candidate` present and session is new | Create session, analyze candidate, analyze curriculum, plan first mission |
+| `message` present and session active | Process turn, collect evidence, update memory/world state, generate next reply |
+| stopping criteria reached | Generate feedback and complete session |
+| provider unavailable | Use stub/template fallback |
 
 ## OpenAPI Requirements
 
-Every endpoint implementation must include:
+The FastAPI implementation must document:
 
-- summary
-- description
-- request examples
-- success response examples
-- documented error responses
-- Pydantic field constraints
+- `POST /api/interview` summary and description
+- start request example
+- turn request example
+- completion response example
+- validation notes
+- feedback schema
+
+## Non-MVP Internal APIs
+
+Earlier planning documents describe session, evidence, and report resources as internal architectural concepts. They should not be exposed as public HTTP endpoints for the hackathon submission unless the technical specification changes.
+
