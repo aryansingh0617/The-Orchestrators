@@ -15,6 +15,7 @@ import {
   Volume2,
   Briefcase,
   Send,
+  Loader2,
 } from 'lucide-react';
 
 export default function InterviewTerminalPage() {
@@ -25,6 +26,7 @@ export default function InterviewTerminalPage() {
   const candidate = getCandidateById(candidateId);
 
   const [messageText, setMessageText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([
     `[SYS_INIT] Initializing Video Assessment Engine (/Luma-Dot-Background)...`,
     `[DOSSIER_VERIFIED] Candidate '${candidateId}' telemetry parsed.`,
@@ -54,22 +56,55 @@ export default function InterviewTerminalPage() {
     );
   }
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = messageText.trim();
-    if (!trimmed) return;
+    if (!trimmed || isLoading) return;
 
-    // Append user message to terminal log
+    // 1. Immediately append user message to terminal log
     setLogs((prev) => [...prev, `[USER_MSG] "${trimmed}"`]);
     setMessageText('');
+    setIsLoading(true);
 
-    // Simulated automated AI acknowledgment / telemetry signal
-    setTimeout(() => {
+    try {
+      // 2. Send POST request to /api/interview proxy
+      const res = await fetch('/api/interview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: candidateId,
+          message: trimmed,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      // 3. Append reply from FastAPI backend into stream log
+      if (data.reply) {
+        setLogs((prev) => [...prev, `[AGENT_REPLY] "${data.reply}"`]);
+      }
+
+      if (data.feedback && data.feedback.summary) {
+        setLogs((prev) => [
+          ...prev,
+          `[FEEDBACK_SUMMARY] ${data.feedback.summary}`,
+        ]);
+      }
+    } catch (err: any) {
+      // 4. Handle HTTP or network errors cleanly
       setLogs((prev) => [
         ...prev,
-        `[AGENT_EVAL] Message received: Evaluating response schema & architectural clarity...`,
+        `[SYS_ERROR] Request failed: ${err?.message || 'Unable to connect to backend server at /api/interview'}`,
       ]);
-    }, 600);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -160,12 +195,16 @@ export default function InterviewTerminalPage() {
                 <div
                   key={idx}
                   className={`leading-relaxed ${
-                    log.includes('[SYS')
+                    log.includes('[SYS_ERROR]')
+                      ? 'text-rose-400 font-normal bg-rose-500/15 p-2 rounded-lg border border-rose-500/30'
+                      : log.includes('[SYS')
                       ? 'text-slate-400'
                       : log.includes('[PROMPT]')
                       ? 'text-[#C13383] font-normal bg-[#C13383]/15 p-2 rounded-lg border border-[#C13383]/30'
                       : log.includes('[USER_MSG]')
                       ? 'text-emerald-300 font-normal bg-emerald-500/15 p-2 rounded-lg border border-emerald-500/30'
+                      : log.includes('[AGENT_REPLY]')
+                      ? 'text-sky-300 font-normal bg-sky-500/15 p-2 rounded-lg border border-sky-500/30'
                       : log.includes('[BENCHMARK]')
                       ? 'text-emerald-300'
                       : 'text-slate-200'
@@ -180,17 +219,23 @@ export default function InterviewTerminalPage() {
             <form onSubmit={handleSendMessage} className="flex items-center gap-2.5 mt-4">
               <input
                 type="text"
+                disabled={isLoading}
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Type a message or response for the candidate/agent..."
-                className="flex-1 bg-white/5 border border-white/15 text-white placeholder-white/40 px-4 py-2.5 rounded-xl text-xs font-bitcount focus:outline-none focus:ring-1 focus:ring-[#E05454]/60 transition-all"
+                placeholder={isLoading ? 'Awaiting backend agent response...' : 'Type a message or response for the candidate/agent...'}
+                className="flex-1 bg-white/5 border border-white/15 text-white placeholder-white/40 px-4 py-2.5 rounded-xl text-xs font-bitcount focus:outline-none focus:ring-1 focus:ring-[#E05454]/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
-                className="glass-action-btn px-5 py-2.5 rounded-xl text-xs font-bitcount flex items-center gap-2 text-white cursor-pointer shrink-0"
+                disabled={isLoading || !messageText.trim()}
+                className="glass-action-btn px-5 py-2.5 rounded-xl text-xs font-bitcount flex items-center gap-2 text-white cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-3.5 h-3.5" />
-                Send
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                {isLoading ? 'Sending...' : 'Send'}
               </button>
             </form>
           </div>
