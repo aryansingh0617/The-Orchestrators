@@ -29,7 +29,7 @@ export default function InterviewTerminalPage() {
   const [logs, setLogs] = useState<string[]>([
     `[SYS_INIT] Initializing Video Assessment Engine (/Luma-Dot-Background)...`,
     `[DOSSIER_VERIFIED] Candidate '${candidateId}' telemetry parsed.`,
-    `[AGENT_SPAWN] Spawning Google Gemini Technical Interviewer (Model: gemini-1.5-flash)...`,
+    `[AGENT_SPAWN] Spawning Google Gemini Technical Interviewer (Model: gemini-3.6-flash)...`,
     `[CURRICULUM_LOAD] Loading Capstone Mission: 'Model Context Protocol & Multi-Agent Swarms'.`,
     `[PROMPT] "Candidate ${candidate?.name || candidateId}, demonstrate how your MCP server architecture handles tool timeouts under load."`,
   ]);

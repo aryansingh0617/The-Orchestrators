@@ -63,7 +63,7 @@ class AIService:
         try:
             genai.configure(api_key=self.api_key)
             self._model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name="gemini-3.6-flash",
                 system_instruction=SYSTEM_INSTRUCTION,
             )
         except Exception as err:
@@ -94,7 +94,7 @@ class AIService:
             try:
                 genai.configure(api_key=self.api_key)
                 self._model = genai.GenerativeModel(
-                    model_name="gemini-1.5-flash",
+                    model_name="gemini-3.6-flash",
                     system_instruction=SYSTEM_INSTRUCTION,
                 )
             except Exception as init_err:
