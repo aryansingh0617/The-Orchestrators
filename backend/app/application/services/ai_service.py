@@ -79,7 +79,12 @@ class AIService:
     ) -> dict[str, Any]:
         """Handle a live chat interaction maintaining strict conversation history & live Gemini API generation."""
         load_dotenv(override=True)
-        api_key = os.getenv("GEMINI_API_KEY") or self.api_key
+        env_key = os.getenv("GEMINI_API_KEY")
+        api_key = (
+            self.api_key
+            if (self.api_key and self.api_key != "your_api_key_here")
+            else (env_key if (env_key and env_key != "your_api_key_here") else None)
+        )
 
         if not HAS_GENAI:
             raise HTTPException(
