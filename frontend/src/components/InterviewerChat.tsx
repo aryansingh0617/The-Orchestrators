@@ -20,6 +20,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  isError?: boolean;
 }
 
 interface InterviewerChatProps {
@@ -75,7 +76,7 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
       }),
     };
 
-    const newHistory = [...messages, userMsg];
+    const newHistory = [...messages.filter((m) => !m.isError), userMsg];
     setMessages(newHistory);
     setInput("");
     setIsLoading(true);
@@ -106,33 +107,35 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(
+          data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`
+        );
       }
 
-      const data = await response.json();
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: "assistant",
-        content:
-          data.reply || "I have recorded your response. What would you analyze next?",
+        content: data.reply,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
       setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
-      console.error("[InterviewerChat] Error sending message:", err);
+    } catch (err: any) {
+      console.error("[InterviewerChat] Error sending message to Gemini API:", err);
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,
         role: "assistant",
-        content:
-          "⚠️ Communication note: Unable to connect to backend server. Retrying backoff mechanism active.",
+        content: `🚨 Gemini API Execution Error:\n${err?.message || "Failed to communicate with live Gemini backend service."}`,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        isError: true,
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -199,6 +202,7 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
       <div className="h-80 sm:h-96 overflow-y-auto pr-2 space-y-4 font-bitcount scrollbar-thin scrollbar-thumb-white/20">
         {messages.map((msg) => {
           const isUser = msg.role === "user";
+          const isError = msg.isError;
           return (
             <div
               key={msg.id}
@@ -209,7 +213,9 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
               {/* Avatar Icon */}
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border shadow-md ${
-                  isUser
+                  isError
+                    ? "bg-rose-950 border-rose-500 text-rose-400"
+                    : isUser
                     ? "bg-gradient-to-br from-[#E05454] to-[#C13383] border-white/40 text-white"
                     : "bg-[#1E1035] border-[#E05454]/60 text-[#E05454]"
                 }`}
@@ -220,13 +226,17 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
               {/* Message Bubble Content */}
               <div
                 className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                  isUser
+                  isError
+                    ? "bg-rose-950/80 text-rose-200 border border-rose-500/50 shadow-lg shadow-rose-950/50 rounded-tl-none font-mono"
+                    : isUser
                     ? "bg-gradient-to-br from-[#E05454]/90 to-[#C13383]/90 text-white border border-white/30 shadow-lg shadow-[#E05454]/20 rounded-tr-none"
                     : "glass-card text-[#E2E8F0] border border-white/20 shadow-md rounded-tl-none"
                 }`}
               >
                 <div className="flex items-center justify-between gap-3 mb-1 opacity-80 text-[10px] uppercase tracking-wider font-mono">
-                  <span className="font-semibold">{isUser ? candidateName : "Gemini Technical Interviewer"}</span>
+                  <span className="font-semibold">
+                    {isError ? "System Exception" : isUser ? candidateName : "Gemini Technical Interviewer"}
+                  </span>
                   <span>{msg.timestamp}</span>
                 </div>
 

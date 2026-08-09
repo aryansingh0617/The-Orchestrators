@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 # Load environment variables from .env file
 load_dotenv()
@@ -45,22 +46,29 @@ Tone & Demeanor:
 
 
 class AIService:
-    """Service encapsulating Google Gemini API for real-time live technical candidate interviews."""
+    """Service encapsulating Google Gemini API for 100% live technical candidate interviews."""
 
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self._model = None
 
-        if HAS_GENAI and self.api_key and self.api_key not in {"your_api_key_here", "test_key", ""}:
-            try:
-                genai.configure(api_key=self.api_key)
-                self._model = genai.GenerativeModel(
-                    model_name="gemini-1.5-flash",
-                    system_instruction=SYSTEM_INSTRUCTION,
-                )
-            except Exception as err:
-                print(f"[AIService] Failed to initialize Gemini model: {err}")
-                self._model = None
+        if not HAS_GENAI:
+            print("[AIService] google-generativeai library is not installed.")
+            return
+
+        if not self.api_key or self.api_key == "your_api_key_here":
+            print("[AIService] GEMINI_API_KEY environment variable is not configured.")
+            return
+
+        try:
+            genai.configure(api_key=self.api_key)
+            self._model = genai.GenerativeModel(
+                model_name="gemini-1.5-flash",
+                system_instruction=SYSTEM_INSTRUCTION,
+            )
+        except Exception as err:
+            print(f"[AIService] Failed to initialize Gemini model: {err}")
+            self._model = None
 
     def handle_chat_session(
         self,
@@ -69,84 +77,63 @@ class AIService:
         chat_history: list[dict[str, Any]] | None = None,
         candidate_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Handle a live chat interaction maintaining strict conversation history & real-time Gemini generation."""
-        raw_history = chat_history or []
+        """Handle a live chat interaction maintaining strict conversation history & live Gemini API generation."""
+        if not HAS_GENAI:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini API Error: 'google-generativeai' package is not installed.",
+            )
 
-        # If live Gemini model client is active, execute real-time API call
-        if self._model is not None:
+        if not self.api_key or self.api_key == "your_api_key_here":
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini API Error: GEMINI_API_KEY is not configured in backend/.env.",
+            )
+
+        if self._model is None:
             try:
-                gemini_history = []
-                for turn in raw_history:
-                    role_str = turn.get("role", "user")
-                    role = "user" if role_str in {"user", "candidate"} else "model"
-                    
-                    if "parts" in turn and isinstance(turn["parts"], list):
-                        parts = [str(p) for p in turn["parts"]]
-                    elif "content" in turn and isinstance(turn["content"], str):
-                        parts = [turn["content"]]
-                    else:
-                        parts = [str(turn)]
+                genai.configure(api_key=self.api_key)
+                self._model = genai.GenerativeModel(
+                    model_name="gemini-1.5-flash",
+                    system_instruction=SYSTEM_INSTRUCTION,
+                )
+            except Exception as init_err:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Gemini API Model Initialization Error: {str(init_err)}",
+                ) from init_err
 
-                    if parts and parts[0].strip():
-                        gemini_history.append({"role": role, "parts": parts})
+        raw_history = chat_history or []
+        gemini_history = []
 
-                chat = self._model.start_chat(history=gemini_history)
-                response = chat.send_message(message)
-                return {
-                    "session_id": session_id,
-                    "reply": response.text,
-                    "provider": "google-gemini",
-                    "status": "success",
-                }
-            except Exception as exc:
-                print(f"[AIService] Live Gemini API execution error: {exc}")
+        for turn in raw_history:
+            role_str = turn.get("role", "user")
+            role = "user" if role_str in {"user", "candidate"} else "model"
 
-        # Real-time adaptive response generator
-        return self._realtime_interviewer_response(session_id, message, raw_history, candidate_info)
+            if "parts" in turn and isinstance(turn["parts"], list):
+                parts = [str(p) for p in turn["parts"]]
+            elif "content" in turn and isinstance(turn["content"], str):
+                parts = [turn["content"]]
+            else:
+                parts = [str(turn)]
 
-    def _realtime_interviewer_response(
-        self,
-        session_id: str,
-        message: str,
-        history: list[dict[str, Any]],
-        candidate_info: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Real-time interviewer generation ensuring 100% uptime and dynamic technical feedback."""
-        cand_name = candidate_info.get("name", "Candidate") if candidate_info else "Candidate"
-        msg_l = message.lower().strip()
+            if parts and parts[0].strip():
+                gemini_history.append({"role": role, "parts": parts})
 
-        if "feedback" in msg_l or "conclude" in msg_l or "end" in msg_l:
-            reply = (
-                f"### Final Technical Assessment & Feedback for {cand_name}\n\n"
-                "**Overall Performance: PASS (Strong Systems Reasoning)**\n\n"
-                "**Technical Strengths:**\n"
-                "- Strong architectural intuition regarding RAG production recovery, hybrid search (BM25 + Dense), and similarity threshold tuning.\n"
-                "- Good awareness of exponential backoff retry logic and fallback mechanisms.\n\n"
-                "**Areas for Growth:**\n"
-                "- Deepen quantitative benchmark analysis for sparse vs dense retrieval trade-offs."
-            )
-        elif "hybrid" in msg_l or "bm25" in msg_l:
-            reply = (
-                "Combining BM25 keyword matching with dense embeddings effectively resolves vocabulary mismatch. "
-                "How do you configure reciprocity rank fusion (RRF) weights to balance exact keyword matches against semantic similarity?"
-            )
-        elif "cache" in msg_l or "threshold" in msg_l:
-            reply = (
-                "Lowering the semantic cache similarity threshold improves hit rate, but risks serving false positives. "
-                "What validation strategy would you implement to detect invalid cache hits in real-time?"
-            )
-        else:
-            reply = (
-                f"Thank you for that explanation, {cand_name}. To probe deeper: how would you monitor latency and error cascades "
-                "when downstream vector database calls timeout during peak traffic loads?"
-            )
-
-        return {
-            "session_id": session_id,
-            "reply": reply,
-            "provider": "google-gemini-live",
-            "status": "success",
-        }
+        try:
+            chat = self._model.start_chat(history=gemini_history)
+            response = chat.send_message(message)
+            return {
+                "session_id": session_id,
+                "reply": response.text,
+                "provider": "google-gemini",
+                "status": "success",
+            }
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Gemini API Execution Failure: {str(exc)}",
+            ) from exc
 
 
 # Global singleton instance
