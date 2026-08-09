@@ -5,8 +5,8 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import HTTPException
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file with override=True
+load_dotenv(override=True)
 
 try:
     import google.generativeai as genai
@@ -78,7 +78,8 @@ class AIService:
         candidate_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Handle a live chat interaction maintaining strict conversation history & live Gemini API generation."""
-        api_key = self.api_key or os.getenv("GEMINI_API_KEY")
+        load_dotenv(override=True)
+        api_key = os.getenv("GEMINI_API_KEY") or self.api_key
 
         if not HAS_GENAI:
             raise HTTPException(
