@@ -1,6 +1,3 @@
-Absolutely. Here is the **complete GitHub `README.md`**, formatted as **one single copy-paste block**. It matches the CHIMERA positioning and the structure visible in your screenshot, while incorporating the backend architecture you built.
-
-````markdown
 # 🧠 CHIMERA — Adaptive AI Interviewer
 
 > An AI-powered adaptive technical interview system that dynamically evaluates candidates, maintains interview state, and determines what should happen next based on evidence collected throughout the interview.
