@@ -78,21 +78,24 @@ class AIService:
         candidate_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Handle a live chat interaction maintaining strict conversation history & live Gemini API generation."""
+        api_key = self.api_key or os.getenv("GEMINI_API_KEY")
+
         if not HAS_GENAI:
             raise HTTPException(
                 status_code=500,
                 detail="Gemini API Error: 'google-generativeai' package is not installed.",
             )
 
-        if not self.api_key or self.api_key == "your_api_key_here":
+        if not api_key or api_key == "your_api_key_here":
             raise HTTPException(
                 status_code=500,
                 detail="Gemini API Error: GEMINI_API_KEY is not configured in backend/.env.",
             )
 
-        if self._model is None:
+        if self._model is None or self.api_key != api_key:
             try:
-                genai.configure(api_key=self.api_key)
+                genai.configure(api_key=api_key)
+                self.api_key = api_key
                 self._model = genai.GenerativeModel(
                     model_name="gemini-3.6-flash",
                     system_instruction=SYSTEM_INSTRUCTION,
