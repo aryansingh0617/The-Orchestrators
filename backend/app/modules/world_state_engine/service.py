@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.modules.world_state_engine.rag_mitigation import RAGIncidentMitigator
 from app.modules.world_state_engine.schemas import WorldStateSnapshot
 
 
@@ -54,18 +55,30 @@ class WorldStateEngine:
         answer_l = candidate_answer.lower()
         applied: list[str] = []
 
-        if re.search(r"\bcache|caching|redis\b", answer_l):
+        if re.search(r"\bretry|backoff|exponential|fallback|downstream|circuit\b", answer_l):
+            mitigations = RAGIncidentMitigator.apply_error_rate_mitigation(state)
+            applied.extend(mitigations)
+        elif re.search(r"\bcanary|rollback|feature flag\b", answer_l):
+            state["error_rate_pct"] = round(max(0.2, float(state.get("error_rate_pct", 2.0)) - 0.8), 2)
+            applied.append("Introduced canary/rollback controls")
+
+        if re.search(r"\bhybrid|bm25|sparse|dense|exact-match|keyword\b", answer_l):
+            mitigations = RAGIncidentMitigator.apply_recall_mitigation(state)
+            applied.extend(mitigations)
+        elif re.search(r"\breindex|re-embed|refresh index|chunk\b", answer_l):
+            state["recall_score"] = round(min(0.95, float(state.get("recall_score", 0.7)) + 0.08), 2)
+            state["latency_ms"] = int(state.get("latency_ms", 300) + 40)
+            applied.append("Adjusted indexing/chunking")
+
+        if re.search(r"\bsimilarity|threshold|semantic cache|lower threshold|lowering threshold\b", answer_l):
+            mitigations = RAGIncidentMitigator.apply_cache_mitigation(state)
+            applied.extend(mitigations)
+        elif re.search(r"\bcache|caching|redis\b", answer_l):
             state["latency_ms"] = max(80, int(state.get("latency_ms", 300) * 0.7))
             state["memory_usage_pct"] = min(95, int(state.get("memory_usage_pct", 50) + 12))
             state["cache_hit_pct"] = min(95, int(state.get("cache_hit_pct", 60) + 15))
             applied.append("Enabled caching")
-        if re.search(r"\breindex|re-embed|refresh index|chunk\b", answer_l):
-            state["recall_score"] = round(min(0.95, float(state.get("recall_score", 0.7)) + 0.08), 2)
-            state["latency_ms"] = int(state.get("latency_ms", 300) + 40)
-            applied.append("Adjusted indexing/chunking")
-        if re.search(r"\bcanary|rollback|feature flag\b", answer_l):
-            state["error_rate_pct"] = round(max(0.2, float(state.get("error_rate_pct", 2.0)) - 0.8), 2)
-            applied.append("Introduced canary/rollback controls")
+
         if re.search(r"\brerate|rate limit|guardrail|moderation\b", answer_l):
             state["error_rate_pct"] = round(max(0.2, float(state.get("error_rate_pct", 2.0)) - 0.5), 2)
             applied.append("Added safety controls")

@@ -9,13 +9,13 @@ from app.modules.mission_generator.schemas import MissionBrief
 
 SIGNAL_PATTERNS = {
     "systems_thinking": r"\b(latency|throughput|bottleneck|cascade|dependency|end-to-end)\b",
-    "tradeoffs": r"\b(trade-?off|cost|latency vs|quality vs|budget|compromise)\b",
-    "reliability": r"\b(rollback|canary|retry|timeout|circuit|sla|slo|failover)\b",
-    "debugging": r"\b(root cause|reproduc|hypothesis|log|trace|metric|bisect)\b",
-    "architecture": r"\b(architect|component|pipeline|interface|boundary|layer)\b",
-    "optimization": r"\b(cache|batch|index|compress|quantize|approximate)\b",
+    "tradeoffs": r"\b(trade-?off|cost|latency vs|quality vs|budget|compromise|sparse vs dense)\b",
+    "reliability": r"\b(rollback|canary|retry|backoff|exponential|fallback|timeout|circuit|sla|slo|failover)\b",
+    "debugging": r"\b(root cause|reproduc|hypothesis|log|trace|metric|bisect|incident)\b",
+    "architecture": r"\b(architect|component|pipeline|interface|boundary|layer|hybrid search|bm25|sparse)\b",
+    "optimization": r"\b(cache|batch|index|compress|quantize|approximate|similarity threshold|semantic cache)\b",
     "security": r"\b(auth|least privilege|injection|exfiltrat|guardrail|redact)\b",
-    "measurement": r"\b(measure|evaluat|metric|dashboard|recall|precision|p95)\b",
+    "measurement": r"\b(measure|evaluat|metric|dashboard|recall|precision|p95|error rate|cache hit)\b",
 }
 
 FALSE_CLAIM_PATTERNS = [
