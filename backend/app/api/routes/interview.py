@@ -25,35 +25,93 @@ class InterviewRequest(BaseModel):
     sessionId: str = Field(
         min_length=1,
         max_length=128,
-        description="Unique external identifier for the interview session.",
+        description="Caller-provided interview session key.",
     )
-    candidate: CandidateDTO = Field(
-        description="Complete candidate context payload."
+    candidate: CandidateDTO | None = Field(
+        default=None,
+        description="Candidate object required when starting a new session.",
     )
-    message: str = Field(
-        default="",
+    message: str | None = Field(
+        default=None,
         max_length=8000,
-        description="Latest candidate response or message text.",
+        description="Candidate response for an existing session.",
     )
 
 
-class ProgressResponse(BaseModel):
-    summary: EvaluationSummaryDTO
-    progress: ProgressDTO
-    worldState: WorldStatePublicDTO
-    activeMission: MissionPublicDTO | None = None
-    reply: str | None = None
-    feedback: FeedbackDTO | None = None
+class FeedbackResponse(BaseModel):
+    summary: str
+    strengths: list[str]
+    gaps: list[str]
+    next: list[str]
+    engineering_dna: dict[str, float] = Field(default_factory=dict)
+    hiring_assessment: str | None = None
 
 
-router = APIRouter(tags=["interview"])
+class InterviewResponse(BaseModel):
+    reply: str
+    done: bool
+    feedback: FeedbackResponse | None = None
+    session_id: str | None = None
+    question_number: int | None = None
+    curriculum_day: int | None = None
+    competency: str | None = None
+    mission: MissionPublicDTO | None = None
+    world_state: WorldStatePublicDTO | None = None
+    progress: ProgressDTO | None = None
+    evaluation_summary: EvaluationSummaryDTO | None = None
+    mode: str | None = None
+
+
+router = APIRouter(prefix="/api", tags=["interview"])
 
 
 @router.post(
     "/interview",
-    response_model=ProgressResponse,
-    summary="Process an interview turn and update world state",
-    description="Primary evaluation endpoint accepting candidate context and messages. Runs evaluation pipeline and transitions state.",
+    response_model=InterviewResponse,
+    summary="Run a Chimera interview turn",
+    description=(
+        "Required hackathon endpoint. Starts a session when candidate data is supplied, "
+        "or processes a candidate message for an existing session."
+    ),
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "start": {
+                            "summary": "Start interview",
+                            "value": {
+                                "sessionId": "abc-123",
+                                "candidate": {
+                                    "member": {
+                                        "id": "CAND-003",
+                                        "name": "Emily Chen",
+                                        "jobRole": "AI Engineer",
+                                        "yearsExperience": 6,
+                                        "education": "MS Artificial Intelligence",
+                                        "status": "COMPLETED",
+                                    },
+                                    "missions": [],
+                                    "signals": {
+                                        "commitDays": 31,
+                                        "missionsCompleted": 31,
+                                        "missionsFirstTry": 30,
+                                    },
+                                },
+                            },
+                        },
+                        "turn": {
+                            "summary": "Conversation turn",
+                            "value": {
+                                "sessionId": "abc-123",
+                                "message": "I would inspect retrieval logs first.",
+                            },
+                        },
+                    }
+                }
+            }
+        }
+    },
 )
 def interview(
     request: InterviewRequest,
