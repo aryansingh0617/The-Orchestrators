@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 from dotenv import load_dotenv
 
@@ -17,21 +18,40 @@ except ImportError:
 SYSTEM_INSTRUCTION = """
 You are an adaptive, elite technical interviewer for Project Chimera, conducting structured AI Engineering & Systems assessment.
 
-Strictly adhere to the following interview behaviors:
-1. ASSESS CANDIDATE UNDERSTANDING: Assess the candidate's grasp of concepts they have completed (e.g. RAG, Vector Search, LLM Fine-Tuning, Agents, Distributed Systems).
-2. ADAPT NATURALLY: Adapt naturally throughout the conversation based on candidate responses—pivot to advanced topics when they excel, or simplify when they struggle.
-3. INTELLIGENT FOLLOW-UPS: Ask intelligent, probe-deeper follow-up questions focusing on root-cause analysis, trade-offs, edge cases, and architectural reasoning.
-4. MAINTAIN SESSION CONTEXT: Maintain coherent context across the entire interview session, building upon prior answers and evidence.
-5. ACTIONABLE CONSTRUCTIVE FEEDBACK: When the interview concludes or feedback is requested, provide clear, actionable, and constructive feedback covering technical strengths and areas for growth.
+Strictly enforce the following behavioral rules throughout every interaction:
+
+1. STRICT CONTEXT AWARENESS:
+   - You MUST review the ENTIRE conversation history before generating a response.
+   - Maintain coherent context across all prior turns.
+   - NEVER repeat a question verbatim if the candidate gives a weak or incomplete answer; instead, rephrase or probe a specific technical sub-concept.
+
+2. HANDLING GIBBERISH & EVASIONS:
+   - If the candidate responds with short evasions (e.g. "idk", "whatever", "idk man", "dunno", "pass", "idk lol"), low-effort answers, or off-topic text:
+     * Politely but firmly call it out (e.g., "That response does not address the technical problem. Please focus on the question at hand and explain your reasoning...").
+     * Rephrase or prompt them once more for a substantive technical answer.
+     * Internally mark down their evaluation score for effort and technical depth.
+
+3. ADAPTIVE TECHNICAL PROBING:
+   - Adapt naturally based on candidate responses—pivot to advanced system design when they excel, or scaffold simpler sub-problems when they struggle.
+   - Ask intelligent follow-up questions focusing on root causes, trade-offs, edge cases, and failure modes.
+
+4. HONEST FINAL EVALUATION:
+   - When generating the final assessment or feedback, calculate the score based on ALL responses across the entire session.
+   - If the candidate provided non-answers, evasions, or low-effort text for multiple questions, the candidate MUST receive a "Fail" or "Needs Improvement" outcome with explicit feedback detailing their lack of technical depth.
 
 Tone & Demeanor:
-- Professional, rigorous, encouraging, and deeply technical.
-- Keep individual responses concise and focused (1-3 paragraphs) with a clear follow-up question unless concluding.
+- Professional, rigorous, firm yet encouraging, and deeply technical.
+- Keep individual responses concise (1-3 paragraphs) with a clear follow-up question unless concluding.
 """
 
 
 class AIService:
-    """Service encapsulating Google Gemini API for technical candidate interviews."""
+    """Service encapsulating Google Gemini API for technical candidate interviews with strict history & grading."""
+
+    EVASION_PATTERN = re.compile(
+        r"\b(idk|dunno|whatever|idk man|idk lol|pass|idk bro|not sure man|skip|who cares|no idea)\b",
+        re.IGNORECASE,
+    )
 
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
@@ -52,20 +72,31 @@ class AIService:
         self,
         session_id: str,
         message: str,
-        chat_history: list[dict[str, str]] | None = None,
+        chat_history: list[dict[str, Any]] | None = None,
         candidate_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Handle a chat interaction within an ongoing technical interview session."""
-        history = chat_history or []
-        
+        """Handle a chat interaction maintaining strict conversation history & context."""
+        raw_history = chat_history or []
+
         # If Gemini client is active, execute live inference
         if self._model is not None:
             try:
                 gemini_history = []
-                for turn in history:
-                    role = "user" if turn.get("role") in {"user", "candidate"} else "model"
-                    gemini_history.append({"role": role, "parts": [turn.get("content", "")]})
-                
+                for turn in raw_history:
+                    role_str = turn.get("role", "user")
+                    role = "user" if role_str in {"user", "candidate"} else "model"
+                    
+                    # Normalize parts / content
+                    if "parts" in turn and isinstance(turn["parts"], list):
+                        parts = [str(p) for p in turn["parts"]]
+                    elif "content" in turn and isinstance(turn["content"], str):
+                        parts = [turn["content"]]
+                    else:
+                        parts = [str(turn)]
+
+                    if parts and parts[0].strip():
+                        gemini_history.append({"role": role, "parts": parts})
+
                 chat = self._model.start_chat(history=gemini_history)
                 response = chat.send_message(message)
                 return {
@@ -78,29 +109,53 @@ class AIService:
                 print(f"[AIService] Gemini API error, falling back to adaptive response: {exc}")
 
         # Fallback adaptive response engine for offline / test mode
-        return self._fallback_adaptive_response(session_id, message, history, candidate_info)
+        return self._fallback_adaptive_response(session_id, message, raw_history, candidate_info)
 
     def _fallback_adaptive_response(
         self,
         session_id: str,
         message: str,
-        history: list[dict[str, str]],
+        history: list[dict[str, Any]],
         candidate_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Adaptive fallback engine ensuring 100% test & offline uptime."""
-        msg_l = message.lower()
+        """Adaptive fallback engine enforcing strict evasion detection & honest grading."""
+        msg_l = message.lower().strip()
         cand_name = candidate_info.get("name", "Candidate") if candidate_info else "Candidate"
-        
+
+        # Check if current message is evasive or low-effort
+        is_evasive = bool(self.EVASION_PATTERN.search(msg_l)) or len(msg_l) < 4
+
+        # Check entire history for evasions
+        has_history_evasions = any(
+            bool(self.EVASION_PATTERN.search(str(turn.get("content", turn.get("parts", ""))).lower()))
+            for turn in history
+        )
+
         if "feedback" in msg_l or "conclude" in msg_l or "end" in msg_l:
+            if is_evasive or has_history_evasions:
+                reply = (
+                    f"### Final Interview Assessment & Feedback for {cand_name}\n\n"
+                    "**Overall Assessment: NEEDS IMPROVEMENT / FAIL**\n\n"
+                    "**Critical Feedback & Technical Gaps:**\n"
+                    "- The candidate provided evasive, non-technical, or low-effort responses during the evaluation session.\n"
+                    "- Failed to demonstrate technical depth in RAG optimization, vector indexing, or system failure recovery.\n\n"
+                    "**Actionable Next Steps:**\n"
+                    "- Review core AI systems architecture, hybrid retrieval (BM25 + Dense), and exponential backoff retry patterns before re-interviewing."
+                )
+            else:
+                reply = (
+                    f"### Final Interview Assessment & Feedback for {cand_name}\n\n"
+                    "**Overall Assessment: PASS (Strong Technical Reasoning)**\n\n"
+                    "**Technical Strengths:**\n"
+                    "- Clear understanding of RAG production incident recovery and hybrid vector search.\n"
+                    "- Good awareness of exponential backoff retry logic and fallback mechanisms.\n\n"
+                    "**Areas for Growth:**\n"
+                    "- Deepen quantitative analysis of cache hit rate trade-offs vs false positive rates."
+                )
+        elif is_evasive:
             reply = (
-                f"### Interview Assessment & Feedback for {cand_name}\n\n"
-                "**Technical Strengths:**\n"
-                "- Strong architectural intuition regarding RAG pipelines & vector search indexing.\n"
-                "- Good awareness of failure modes, fallback patterns, and exponential backoff retries.\n\n"
-                "**Areas for Growth:**\n"
-                "- Deepen quantitative benchmark analysis for sparse vs dense retrieval trade-offs.\n"
-                "- Practice fine-tuning cost estimation vs zero-shot prompting.\n\n"
-                "Overall Performance: **Strong Pass**. Excellent systems reasoning!"
+                "That response does not answer the technical problem. Please focus on the question at hand and explain your reasoning.\n\n"
+                "To restate: how would you optimize query recall and error handling when a vector database experiences latency spikes?"
             )
         elif "hybrid" in msg_l or "bm25" in msg_l:
             reply = (

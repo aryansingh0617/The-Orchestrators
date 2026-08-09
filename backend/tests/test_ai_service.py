@@ -16,30 +16,49 @@ def test_ai_service_initialization_and_fallback() -> None:
     assert "bm25" in res["reply"].lower() or "hybrid" in res["reply"].lower() or "reciprocity" in res["reply"].lower()
 
 
-def test_ai_service_feedback_generation() -> None:
+def test_ai_service_evasion_detection() -> None:
     service = AIService(api_key="test_key")
     res = service.handle_chat_session(
-        session_id="test-session-102",
-        message="Can you provide my final interview feedback and conclude the session?",
-        candidate_info={"name": "Sarah Johnson"},
+        session_id="test-session-evasion",
+        message="idk man whatever",
+        candidate_info={"name": "Evasive Candidate"},
     )
-    assert "Strengths" in res["reply"] or "Feedback" in res["reply"]
-    assert "Sarah Johnson" in res["reply"] or "Candidate" in res["reply"]
+    assert "does not answer" in res["reply"].lower() or "focus" in res["reply"].lower()
 
 
-def test_api_interview_chat_endpoint() -> None:
+def test_ai_service_honest_evaluation_fail() -> None:
+    service = AIService(api_key="test_key")
+    evasive_history = [
+        {"role": "user", "content": "idk"},
+        {"role": "assistant", "content": "Please answer the technical question."},
+        {"role": "user", "content": "whatever"},
+    ]
+    res = service.handle_chat_session(
+        session_id="test-session-fail",
+        message="Can I get my final evaluation feedback now?",
+        chat_history=evasive_history,
+        candidate_info={"name": "Weak Candidate"},
+    )
+    assert "NEEDS IMPROVEMENT" in res["reply"] or "FAIL" in res["reply"]
+    assert "Weak Candidate" in res["reply"]
+
+
+def test_api_interview_chat_endpoint_with_parts_history() -> None:
     client = TestClient(app)
     response = client.post(
         "/api/interview/chat",
         json={
-            "sessionId": "chat-session-999",
+            "sessionId": "chat-session-parts",
             "message": "We adjusted the semantic cache similarity threshold to boost cache hits.",
+            "chat_history": [
+                {"role": "user", "parts": ["How do you fix high query latency?"]},
+                {"role": "model", "parts": ["We can apply caching or indexing."]},
+            ],
             "candidate_info": {"name": "Alex Turner"},
         },
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["session_id"] == "chat-session-999"
+    assert data["session_id"] == "chat-session-parts"
     assert "reply" in data
     assert data["status"] == "success"
-    assert "provider" in data

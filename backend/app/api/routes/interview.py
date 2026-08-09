@@ -132,7 +132,7 @@ def interview(
 class ChatSessionRequest(BaseModel):
     sessionId: str = Field(min_length=1, max_length=128)
     message: str = Field(min_length=1, max_length=8000)
-    chat_history: list[dict[str, str]] | None = Field(default_factory=list)
+    chat_history: list[dict[str, Any]] | None = Field(default_factory=list)
     candidate_info: dict[str, Any] | None = None
 
 
