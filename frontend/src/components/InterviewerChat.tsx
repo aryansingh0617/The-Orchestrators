@@ -107,12 +107,17 @@ export function InterviewerChat({ candidate, sessionKey }: InterviewerChatProps)
         }),
       });
 
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`
-        );
+        const errorMsg =
+          data.error || data.message || data.detail || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
       }
 
       const aiMsg: ChatMessage = {
