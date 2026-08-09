@@ -1,33 +1,30 @@
-# The-Orchestrators
+# 🧠 CHIMERA — Adaptive AI Interviewer
 
-Project Chimera is an AI Engineering Assessment Operating System for dynamic, mission-based engineering interviews.
+> An AI-powered adaptive technical interview system that dynamically evaluates candidates, maintains interview state, and determines what should happen next based on evidence collected throughout the interview.
 
-This repository is being built milestone by milestone. The first milestone establishes repository structure only; product, architecture, and implementation decisions are documented in the next milestone before application code begins.
+## 🚀 Overview
 
-## Milestone Protocol
+Traditional AI interviewers usually follow a fixed pattern:
 
-Each milestone follows:
+Question → Answer → Question → Answer → Report
 
-1. Design
-2. Review
-3. Refine
-4. Implement
-5. Test
-6. Refactor
-7. Document
-8. Commit
-9. Stop
+**CHIMERA** is designed differently.
 
-## Planned Stack
+It treats an interview as an evolving stateful system where every candidate response can influence the next step.
 
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy
-- Frontend: Next.js, TypeScript, TailwindCSS, shadcn/ui
-- Architecture: Clean Architecture, Repository Pattern, Service Layer, provider abstraction
-
-## Repository Layout
-
-- `backend/`: FastAPI service implementation
-- `frontend/`: Next.js application
-- `docs/`: engineering documentation
-- `tests/`: cross-project tests and fixtures
-- `scripts/`: development and automation scripts
+```text
+Candidate Response
+        ↓
+Evidence Extraction
+        ↓
+Candidate Analysis
+        ↓
+Evaluation
+        ↓
+Memory Update
+        ↓
+World State Update
+        ↓
+Next Mission Generation
+        ↓
+Adaptive Interview
