@@ -1,5 +1,6 @@
 from app.domain.entities.assessment import (
     AssessmentSession,
+    Candidate,
     CandidateTurn,
     Competency,
     Evaluation,
@@ -11,6 +12,7 @@ from app.domain.entities.assessment import (
 
 __all__ = [
     "AssessmentSession",
+    "Candidate",
     "CandidateTurn",
     "Competency",
     "Evaluation",

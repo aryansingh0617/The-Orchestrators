@@ -132,6 +132,42 @@ When the interview is complete, the endpoint returns `done: true` and feedback.
 | reply | string | Yes | Candidate-facing interviewer response |
 | done | boolean | Yes | Whether the interview is complete |
 | feedback | object | Only when done is true | Final candidate feedback |
+| session_id | string | Optional | Echo of active session id |
+| question_number | integer | Optional | Completed candidate answers so far |
+| curriculum_day | integer | Optional | Current curriculum day |
+| competency | string | Optional | Current competency target |
+| mission | object | Optional | Candidate-safe mission brief |
+| world_state | object | Optional | Visible system state snapshot |
+| progress | object | Optional | Coverage against minimum requirements |
+| evaluation_summary | object | Optional | Concise outcome for the last answer |
+| mode | string | Optional | Planner mode for this turn |
+
+Compatibility note: clients may ignore additive fields. Hidden evaluation criteria, prompts, and chain-of-thought are never returned.
+
+## Mission Public Schema
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| title | string | Mission title |
+| scenario | string | Candidate-facing scenario |
+| context | string | Supporting context |
+| constraints | string[] | Visible constraints |
+| objective | string | Mission objective |
+| competency | string | Target competency |
+| curriculum_day | integer | Curriculum day |
+| difficulty | string | basic/intermediate/advanced/expert |
+| mission_type | string | architecture/debugging/... |
+
+## Progress Schema
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| question_number | integer | Answers processed |
+| curriculum_days_covered | integer | Distinct days covered |
+| covered_curriculum_days | integer[] | Day ids covered |
+| minimum_questions | integer | Default 8 |
+| minimum_curriculum_days | integer | Default 4 |
+
 
 ## Feedback Schema
 

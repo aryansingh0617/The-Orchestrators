@@ -17,6 +17,7 @@ This directory defines Project Chimera before implementation begins.
 - [GIT_WORKFLOW.md](GIT_WORKFLOW.md)
 - [RISKS.md](RISKS.md)
 - [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
+- [MIGRATIONS.md](MIGRATIONS.md)
 
 ## Documentation Principles
 

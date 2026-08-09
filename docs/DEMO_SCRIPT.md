@@ -23,11 +23,15 @@ Demo seed curriculum:
 Evaluate senior AI engineers on RAG debugging, LLM evaluation, production observability, latency/cost tradeoffs, prompt and retrieval design, and communication during incidents.
 ```
 
-Hackathon API:
+## Deterministic CLI demo
 
-```text
-POST /api/interview
+From `backend/` with stub provider (no API key required):
+
+```bash
+python -m scripts.demo_interview
 ```
+
+This runs the real InterviewService orchestration end-to-end and prints mission, world-state, adaptive modes, Engineering DNA, and feedback.
 
 ## Story Arc
 
